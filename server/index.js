@@ -21,7 +21,7 @@ app.use(
 app.use(bodyParser.json());
 
 app.use("/auth", authRoutes);
-// app.use("/houses", houseRoutes);
+app.use("/houses", houseRoutes);
 
 sequelize.sync().then(() => {
   app.listen(3000, () => {
