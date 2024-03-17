@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       is_spouse_staff: {
         type: DataTypes.BOOLEAN,
-        allowNull: true,
+        allowNull: false,
       },
       spouse_id: {
         type: DataTypes.UUID,
@@ -90,7 +90,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       additional_position: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       document_verified: {
         type: DataTypes.STRING,

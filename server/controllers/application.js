@@ -9,12 +9,50 @@ const createApplication = async (req, res) => {
     const token = req.headers.authorization.split(" ")[1]; // Assuming JWT is sent in the Authorization header
     const decodedToken = jwtrew.verify(token, "your_jwt_secret_key"); // Replace 'your_jwt_secret_key' with your actual JWT secret key
     const user_id = decodedToken.user_id;
-    const { title, description, link } = req.body;
+    const {
+      full_name,
+      spouse_full_name,
+      is_spouse_staff,
+      spouse_id,
+      family_size,
+      status,
+      gender,
+      position,
+      academic_title,
+      type,
+      mobile_phone_number,
+      office_phone_number,
+      grade,
+      signature,
+      disablity,
+      additional_position,
+      document_verified,
+      temporary_rank,
+      final_rank,
+      houseAd_id,
+    } = req.body;
 
     const Application = await Application.create({
-      title,
-      description,
-      link,
+      full_name,
+      spouse_full_name,
+      is_spouse_staff,
+      spouse_id,
+      family_size,
+      status,
+      gender,
+      position,
+      academic_title,
+      type,
+      mobile_phone_number,
+      office_phone_number,
+      grade,
+      signature,
+      disablity,
+      additional_position,
+      document_verified,
+      temporary_rank,
+      final_rank,
+      houseAd_id,
       user_id,
     });
 

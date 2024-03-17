@@ -6,16 +6,13 @@ const jwt = require("jsonwebtoken");
 
 const createDocument = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; // Assuming JWT is sent in the Authorization header
-    const decodedToken = jwt.verify(token, "your_jwt_secret_key"); // Replace 'your_jwt_secret_key' with your actual JWT secret key
-    const user_id = decodedToken.user_id;
-    const { title, description, link } = req.body;
+    const { title, file_path, verification_status, application_id } = req.body;
 
     const Document = await Document.create({
       title,
-      description,
-      link,
-      user_id,
+      file_path,
+      verification_status,
+      application_id,
     });
 
     res
