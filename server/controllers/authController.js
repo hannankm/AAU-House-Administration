@@ -66,9 +66,13 @@ const login = async (req, res) => {
     // Redirect based on user role
 
     if (roleNames.includes("applicant")) {
-      res.json({ message: " Applicant login successful", user });
+      res.json({ role: "Applicant", user });
     } else if (roleNames.includes("head")) {
-      res.json({ message: "Head login successful", user });
+      res.json({ role: "Head", user });
+    } else if (roleNames.includes("president")) {
+      res.json({ role: "President", user });
+    } else if (roleNames.includes("director")) {
+      res.json({ role: "Director", user });
     } else {
       res.json({ message: "Login successful", user });
     }

@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      this.belongsToMany(models.User, {
+      this.belongsToMany(models.Role, {
         through: "UserRole", // The through option specifies the intermediate model (junction table)
         foreignKey: "user_id", // The foreign key in the junction table that references Role
         otherKey: "role_id",

@@ -120,12 +120,10 @@ const deleteHouse = async (req, res) => {
   }
 };
 
-const getHousesByStatus = async (req, res) => {
-  const { status } = req.params;
-
+const getEmptyHouses = async (req, res) => {
   try {
     const houses = await House.findAll({
-      where: { status },
+      where: { status: "empty" },
     });
 
     res.json({ houses });
@@ -140,5 +138,5 @@ module.exports = {
   createHouse,
   updateHouse,
   deleteHouse,
-  getHousesByStatus,
+  getEmptyHouses,
 };
