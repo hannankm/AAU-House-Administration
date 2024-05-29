@@ -1,11 +1,14 @@
-const Advertisement = require("../models").Adverstisement;
+const Advertisement = require("../models").Advertisement;
 const { House } = require("../models"); // Import your House model
-const HouseAdvertisement = require("../models").HouseAdverstisement;
+const HouseAdvertisement = require("../models").HouseAdvertisement;
 
 // Create a new house advertisement
 const createHouseAdvertisement = async (req, res) => {
   try {
     const { ad_id, house_id } = req.body;
+
+    // if ad id is not active/ pending
+    // house id is not empty
 
     const houseAdvertisement = await HouseAdvertisement.create({
       ad_id,
@@ -22,8 +25,6 @@ const createHouseAdvertisement = async (req, res) => {
 };
 
 // Get houses by advertisement ID
-// controllers/houseAdvertisementController.js
-
 const getHousesByAdvertisementId = async (req, res) => {
   try {
     const { ad_id } = req.params;
@@ -38,7 +39,7 @@ const getHousesByAdvertisementId = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Houses fetched successfully by advertisement ID",
-      data: houses,
+      data: houseAdvertisements,
     });
   } catch (error) {
     console.error(error);
@@ -83,3 +84,7 @@ module.exports = {
   getHousesByAdvertisementId,
   getAdvertisementsByHouseId,
 };
+
+// delete house id
+// validate on create house ad
+// send house count of each ads

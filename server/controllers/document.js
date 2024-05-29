@@ -2,22 +2,62 @@
 // get docuements by user
 // get docuements by house ad
 const Document = require("../models").Document;
+const Application = require("../models").Application;
+
 const jwt = require("jsonwebtoken");
 
 const createDocument = async (req, res) => {
   try {
-    const { title, file_path, verification_status, application_id } = req.body;
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
 
-    const Document = await Document.create({
-      title,
-      file_path,
-      verification_status,
-      application_id,
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
+
+    const { application_id } = req.params;
+    const application = await Application.findByPk(application_id);
+
+    if (!application) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+
+    const singleFile = req.files.singleFile?.[0]; // Retrieve the first file for 'singleFile' key
+    const multiFiles = req.files.multiFiles; // Retrieve all files for 'multiFiles' key
+
+    const uploadedFiles = [];
+
+    if (singleFile) {
+      uploadedFiles.push({ key: "singleFile", path: singleFile.path });
+    }
+
+    if (multiFiles) {
+      multiFiles.forEach((file) => {
+        uploadedFiles.push({ key: "multiFiles", path: file.path });
+      });
+    }
+
+    res.status(200).json({
+      message: "Files uploaded successfully",
+      files: uploadedFiles,
     });
+
+    const documents = [];
+
+    for (const file of req.files) {
+      const document = await Document.create({
+        title: req.body.name,
+        // type: req.body.type,
+        file_path: file.path,
+        application: application_id,
+      });
+      documents.push(document); // Keep track of the created documents
+    }
 
     res
       .status(201)
-      .json({ message: "Document created successfully", Document });
+      .json({ message: "Document created successfully", documents });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -25,7 +65,7 @@ const createDocument = async (req, res) => {
 
 const getDocuments = async (req, res) => {
   try {
-    const Documents = await Document.findAll();
+    const documents = await Document.findAll();
 
     res.status(200).json({ Documents });
   } catch (error) {
@@ -37,13 +77,13 @@ const getDocumentById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const Document = await Document.findByPk(id);
+    const document = await Document.findByPk(id);
 
-    if (!Document) {
+    if (!document) {
       return res.status(404).json({ error: "Document not found" });
     }
 
-    res.status(200).json({ Document });
+    res.status(200).json({ document });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -94,3 +134,9 @@ module.exports = {
   updateDocument,
   deleteDocument,
 };
+
+// what are all the files necesary
+// Birth certificate
+// marital certificate
+// hr letter
+//

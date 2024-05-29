@@ -1,25 +1,17 @@
-// controllers/advertisementController.js
-const Advertisement = require("../models").Adverstisement;
-const { House } = require("../models"); // Import your House model
+const Advertisement = require("../models").Advertisement;
+const { House } = require("../models");
 
 const createAdvertisement = async (req, res) => {
   try {
-    const {
-      post_date,
-      application_start_date,
-      application_deadline,
-      status,
-      notes,
-      house_count,
-    } = req.body;
+    const { post_date, application_start_date, application_deadline, notes } =
+      req.body;
 
     const advertisement = await Advertisement.create({
-      post_date,
+      post_date: Date.now(),
       application_start_date,
       application_deadline,
       status: "Pending",
       notes,
-      house_count,
     });
 
     res
@@ -199,7 +191,7 @@ const getActiveAdvertisment = async (req, res) => {
 };
 
 const authorizeByPresident = async (req, res) => {
-  const adId = req.params.id; // Assuming you're passing the adId as a parameter in the route
+  const adId = req.params.id;
 
   try {
     // Check if the advertisement exists
@@ -211,7 +203,7 @@ const authorizeByPresident = async (req, res) => {
       });
     }
 
-    // Check if the status is approved by director or any other condition that fits your business logic
+    // Check if the status is approved by director
     if (advertisement.status !== "approved_by_director") {
       return res.status(400).json({
         success: false,
@@ -220,7 +212,7 @@ const authorizeByPresident = async (req, res) => {
       });
     }
 
-    // Update the status to approved by president and set the post date
+    // Update the status to approved by president
     await advertisement.update({
       status: "approved_by_president",
     });
@@ -241,7 +233,7 @@ const authorizeByPresident = async (req, res) => {
 };
 
 const authorizeByDirector = async (req, res) => {
-  const adId = req.params.id; // Assuming you're passing the adId as a parameter in the route
+  const adId = req.params.id;
 
   try {
     // Check if the advertisement exists
@@ -253,7 +245,7 @@ const authorizeByDirector = async (req, res) => {
       });
     }
 
-    // Check if the status is pending or any other condition that fits your business logic
+    // Check if the status is pending
     if (advertisement.status !== "Pending") {
       return res.status(400).json({
         success: false,
@@ -262,7 +254,7 @@ const authorizeByDirector = async (req, res) => {
       });
     }
 
-    // Update the status to approved by director and set the post date
+    // Update the status to approved by director
     await advertisement.update({
       status: "approved_by_director",
     });
@@ -283,7 +275,7 @@ const authorizeByDirector = async (req, res) => {
 };
 
 const rejectByDirector = async (req, res) => {
-  const adId = req.params.id; // Assuming you're passing the adId as a parameter in the route
+  const adId = req.params.id;
 
   try {
     // Check if the advertisement exists
@@ -295,7 +287,7 @@ const rejectByDirector = async (req, res) => {
       });
     }
 
-    // Check if the status is pending or any other condition that fits your business logic
+    // Check if the status is pending
     if (advertisement.status !== "Pending") {
       return res.status(400).json({
         success: false,
@@ -304,7 +296,7 @@ const rejectByDirector = async (req, res) => {
       });
     }
 
-    // Update the status to approved by director and set the post date
+    // Update the status to rejected by director
     await advertisement.update({
       status: "rejected_by_director",
     });
@@ -325,7 +317,7 @@ const rejectByDirector = async (req, res) => {
 };
 
 const rejectByPresident = async (req, res) => {
-  const adId = req.params.id; // Assuming you're passing the adId as a parameter in the route
+  const adId = req.params.id;
 
   try {
     // Check if the advertisement exists
@@ -337,7 +329,7 @@ const rejectByPresident = async (req, res) => {
       });
     }
 
-    // Check if the status is pending or any other condition that fits your business logic
+    // Check if the status is approved by director
     if (advertisement.status !== "approved_by_director") {
       return res.status(400).json({
         success: false,
@@ -346,7 +338,7 @@ const rejectByPresident = async (req, res) => {
       });
     }
 
-    // Update the status to approved by director and set the post date
+    // Update the status to rejected by president
     await advertisement.update({
       status: "rejected_by_president",
     });
@@ -367,7 +359,7 @@ const rejectByPresident = async (req, res) => {
 };
 
 const postAdvertisement = async (req, res) => {
-  const adId = req.params.id; // Assuming you're passing the adId as a parameter in the route
+  const adId = req.params.id;
   try {
     // Check if the advertisement exists
     const advertisement = await Advertisement.findByPk(adId);
@@ -378,7 +370,22 @@ const postAdvertisement = async (req, res) => {
       });
     }
 
-    // Check if the status is pending or any other condition that fits your business logic
+    const activeAds = await Advertisement.findOne({
+      where: {
+        status: "active",
+      },
+    });
+
+    // Check if the status is approved by president
+    if (activeAds) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Advertisement cannot be posted. There is an active ad at the moment, there cannot be two active advertisements at a time.",
+      });
+    }
+
+    // check if there is an active ad first
     if (advertisement.status !== "approved_by_president") {
       return res.status(400).json({
         success: false,
@@ -386,7 +393,6 @@ const postAdvertisement = async (req, res) => {
           "Advertisement cannot be posted. Status is not approved by president.",
       });
     }
-
     // Update the status to approved by director and set the post date
     await advertisement.update({
       status: "active",
@@ -424,3 +430,8 @@ module.exports = {
   rejectByDirector,
   rejectByPresident,
 };
+
+// no two active ads at a time
+
+// get rejected ads for head then update it
+// status - application closed
