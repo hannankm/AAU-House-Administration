@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import Sidebar from "../../Components/Sidebar";
 import Navbar from "../../Components/navbar";
+import SignatureInput from "../../Components/SignatureInput"; // Adjust the path as needed
 
 const ApplicationPage = () => {
+  // on apply click -> either start a new application or if there is one already edit the old application
   const [activeStep, setActiveStep] = useState(1);
   const [formData, setFormData] = useState({
     post_date: "",
@@ -14,9 +14,11 @@ const ApplicationPage = () => {
     house_count: 0,
   });
 
-  const [emptyHouses, setEmptyHouses] = useState([]);
-  const [selectedHouses, setSelectedHouses] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
+  const [signature, setSignature] = useState("");
+
+  const handleSignatureChange = (signatureData) => {
+    setSignature(signatureData);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,44 +26,26 @@ const ApplicationPage = () => {
   };
 
   const handleNextStep = () => {
+    // handleCreateApplication();
     setActiveStep((prevStep) => prevStep + 1);
   };
 
-  const handleCreateAdvertisement = async () => {
+  const handleSubmit = () => {
+    // handleUploadDocuments();
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
+  const handleCreateApplication = async () => {
     try {
-      //   // Make an API call to create the advertisement
-      //   const adResponse = await fetch("http://localhost:5000/ads/", {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       ...formData,
-      //       house_count: selectedHouses.length,
-      //     }),
-      //   });
-      //   if (adResponse.ok) {
-      //     const { message, advertisement } = await adResponse.json();
-      //     const generatedAdId = advertisement.ad_id;
-      //     console.log("Advertisement created:", advertisement);
-      //     // Make API calls to associate houses with the advertisement
-      //     for (const houseId of selectedHouses) {
-      //       await fetch("http://localhost:5000/house-ads/", {
-      //         method: "POST",
-      //         headers: {
-      //           "Content-Type": "application/json",
-      //         },
-      //         body: JSON.stringify({ ad_id: generatedAdId, house_id: houseId }),
-      //       });
-      //     }
-      //     // Handle the response from the server as needed
-      //     // You may want to navigate to another page after successful creation
-      //     // Example: Redirect to the advertisement list page
-      //     // history.push('/advertisements');
-      //     alert("Advertisement created succesfully");
-      //   } else {
-      //     console.error("Error creating advertisement:", adResponse.status);
-      //   }
+    } catch (error) {
+      console.error("Error creating advertisement:", error);
+    }
+  };
+
+  const handleUploadDocuments = async () => {
+    setActiveStep(3);
+
+    try {
     } catch (error) {
       console.error("Error creating advertisement:", error);
     }
@@ -299,6 +283,13 @@ const ApplicationPage = () => {
                 >
                   Next
                 </button>
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="bg-blue text-white py-2 px-4 rounded-md w-3/4"
+                >
+                  Save Progress & Continue Later
+                </button>
               </form>
             </>
           )}
@@ -314,8 +305,12 @@ const ApplicationPage = () => {
                     htmlFor="hrLetter"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    HR Letter of Continuance
+                    HR Letter
                   </label>
+                  <small>
+                    This letter should include your position, years of
+                    experience, academic title and letter of continuance.
+                  </small>
                   <input
                     type="file"
                     id="hrLetter"
@@ -351,6 +346,7 @@ const ApplicationPage = () => {
                   </label>
                   <input
                     type="file"
+                    multiple
                     id="childrenBirthCertificate"
                     name="childrenBirthCertificate"
                     accept=".pdf, .jpg, .jpeg, .png"
@@ -361,61 +357,27 @@ const ApplicationPage = () => {
 
                 <div className="mb-4">
                   <label
-                    htmlFor="experienceProof"
+                    htmlFor="disabilityProof"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Years of Experience Proof
+                    Disability Proof
                   </label>
                   <input
                     type="file"
-                    id="experienceProof"
-                    name="experienceProof"
+                    id="disabilityProof"
+                    name="disabilityProof"
                     accept=".pdf, .doc, .docx"
-                    //   onChange={(e) => handleFileChange(e, "experienceProof")}
+                    //   onChange={(e) => handleFileChange(e, "disabilityProof")}
                     className="mt-1 p-2 border rounded-md focus:outline-none focus:border-blue w-3/4"
                   />
                 </div>
 
-                <div className="mb-4">
-                  <label
-                    htmlFor="positionProof"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Position Proof
-                  </label>
-                  <input
-                    type="file"
-                    id="positionProof"
-                    name="positionProof"
-                    accept=".pdf, .doc, .docx"
-                    //   onChange={(e) => handleFileChange(e, "positionProof")}
-                    className="mt-1 p-2 border rounded-md focus:outline-none focus:border-blue w-3/4"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label
-                    htmlFor="signatureFile"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Signature File
-                  </label>
-                  <input
-                    type="file"
-                    id="signatureFile"
-                    name="signatureFile"
-                    accept=".png, .jpg, .jpeg"
-                    //   onChange={(e) => handleFileChange(e, "signatureFile")}
-                    className="mt-1 p-2 border rounded-md focus:outline-none focus:border-blue w-3/4"
-                  />
-                </div>
-                <br />
                 <button
                   type="button"
-                  onClick={handleCreateAdvertisement}
+                  onClick={handleUploadDocuments}
                   className="bg-blue text-white py-2 px-4 rounded-md w-3/4"
                 >
-                  Submit Application
+                  Next
                 </button>
               </div>
               <br />
@@ -425,6 +387,32 @@ const ApplicationPage = () => {
                 className="bg-gray-300 text-white py-2 px-4 rounded-md mr-2"
               >
                 Go Back
+              </button>
+            </>
+          )}
+          {activeStep === 3 && (
+            <>
+              <p className="text-justify my-4">
+                I hereby confirm that neither I nor my spouse have any ownership
+                of private or public houses. I also attest that the information
+                provided in this application form and the documents uploaded are
+                accurate. I understand that any falsification on my part will
+                result in legal action being taken against me. By signing below,
+                I acknowledge and agree to these terms.
+              </p>
+              <div className="mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Signature</h2>
+                  <SignatureInput onSignatureChange={handleSignatureChange} />
+                </div>
+              </div>
+              <br />
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="bg-blue text-white py-2 px-4 rounded-md w-3/4"
+              >
+                Submit Application
               </button>
             </>
           )}

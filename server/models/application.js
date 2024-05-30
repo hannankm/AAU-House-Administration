@@ -2,6 +2,7 @@
 const { Model } = require("sequelize");
 // is it better to have temporary grade and final grade then have rank calculated
 // spouse equally home tenant
+// status - waitlisted
 
 module.exports = (sequelize, DataTypes) => {
   class Application extends Model {
@@ -13,11 +14,18 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Application.belongsTo(models.User, {
-        foreignKey: "UserId",
-        as: "user",
+        foreignKey: "applicant_id",
+        as: "applicant",
       });
-      Application.belongsTo(models.HouseAdverstisement);
-      Application.hasMany(models.Document);
+
+      Application.belongsTo(models.HouseAdvertisement, {
+        foreignKey: "HouseAdvertisementId",
+      });
+
+      Application.hasMany(models.Document, {
+        foreignKey: "application_id",
+        as: "documents",
+      });
     }
   }
 
@@ -28,18 +36,15 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      full_name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
       spouse_full_name: {
         type: DataTypes.STRING,
         allowNull: true,
       },
       is_spouse_staff: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
+        allowNull: true,
       },
+      // spouse email -- then map id from email cause unlikely that the user will know their id
       spouse_id: {
         type: DataTypes.UUID,
         allowNull: true,
@@ -49,10 +54,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
+        // submitted, disqualified, documents verified, waitlisted, closed, won
         type: DataTypes.STRING,
         allowNull: false,
       },
-      gender: {
+      college_department: {
         type: DataTypes.STRING,
         allowNull: false,
       },
@@ -65,18 +71,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      mobile_phone_number: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      office_phone_number: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      grade: {
+        // new or transfer applicant
         type: DataTypes.STRING,
         allowNull: false,
       },
@@ -85,8 +80,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       disablity: {
+        // None or write it out
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       additional_position: {
         type: DataTypes.STRING,
@@ -96,26 +92,26 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      temporary_rank: {
-        type: DataTypes.STRING,
-        allowNull: false,
+      temporary_grade: {
+        type: DataTypes.DOUBLE,
+        allowNull: true,
       },
-      final_rank: {
-        type: DataTypes.STRING,
-        allowNull: false,
+      final_grade: {
+        type: DataTypes.DOUBLE,
+        allowNull: true,
       },
       applicant_id: {
         type: DataTypes.UUID,
         references: {
-          model: "User", // Assuming your User model is named 'User'
+          model: "User",
           key: "user_id",
         },
         allowNull: false,
       },
-      houseAd_id: {
+      HouseAdvertisementId: {
         type: DataTypes.UUID,
         references: {
-          model: "HouseAdverstisement", // Assuming your User model is named 'User'
+          model: "HouseAdvertisement",
           key: "id",
         },
         allowNull: false,
@@ -124,8 +120,23 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Application",
+      tableName: "applications",
     }
   );
 
   return Application;
 };
+
+// generate result for each application based on req then store grade (tentative) - sort desceding then store final grade - store rank?? or no need just grade it then store as index sorted.
+// status -- in progress, submitted, document verfication pending, document verified, tentative result announced, disqualified, final result announced, waitlisted, not selected, selected/ winner.
+
+// while ranking filter out disqaluified and where documents verified == true,
+
+// for waitlist applicant preferences -- site, floor, type, bed cap
+
+// marital status checkbox on frontend if true display three spouse feilds else dont
+// the other
+
+// you have started an application elsewhere are yiu sure you want to start a new one if status is saved/started
+
+// verify docs by user or type of doc

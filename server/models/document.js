@@ -10,7 +10,10 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Document.belongsTo(models.Document);
+      Document.belongsTo(models.Application, {
+        foreignKey: "application_id",
+        as: "application",
+      });
     }
   }
 
@@ -29,9 +32,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      // pending, verified, rejected, in progress
       verification_status: {
-        type: DataTypes.BOOLEAN,
+        type: DataTypes.STRING,
         allowNull: false,
+      },
+      verified_by: {
+        type: DataTypes.UUID,
+        references: {
+          model: "User", // Assuming your User model is named 'User'
+          key: "user_id",
+        },
+        allowNull: true,
       },
       application_id: {
         type: DataTypes.UUID,
@@ -40,11 +52,13 @@ module.exports = (sequelize, DataTypes) => {
           key: "application_id",
         },
         allowNull: false,
+        field: "application_id",
       },
     },
     {
       sequelize,
       modelName: "Document",
+      tableName: "documents",
     }
   );
 

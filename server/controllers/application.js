@@ -4,6 +4,7 @@
 const Application = require("../models").Application;
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const { where } = require("sequelize");
 
 dotenv.config();
 
@@ -134,11 +135,55 @@ const deleteApplication = async (req, res) => {
   }
 };
 
-const evaluate_tentative_grade = async (req, res) => {
+const evaluateTemporaryGrade = (application) => {
+  let temporary_grade = 0;
+
+  // application.gender == F +5
+  // if disability == yes +10
+  // if application.yoe >15 20,
+  // application. position
+  // acadmic title
+  // family size ==
+  // if spouse is staff
+
+  // application.
+  // Your logic for evaluating temporary grade
+  // This could involve calculations based on application data
+  // Return the evaluated temporary grade
+  // update applciation grade
+  // 
+};
+
+// rank then announce
+const rank_applicants = (house_ad) => {
+  // based on temporary grade sort descending order if equal points
+  // disable person first
+  // then female first
+  // then at random
+};
+
+const view_my_applications = async (req, res) => {
   try {
-  } catch (err) {
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
+    const applicant_id = decodedToken.user_id;
+    const my_applications = await Application.findAll({
+      where: { applicant_id: applicant_id },
+    });
+    res.status(200).json({ my_applications });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+const submitApplication = async (req, res) => {
+  // ?create document entires for all
+  // change status to "submitted"
 };
 
 module.exports = {
@@ -147,6 +192,8 @@ module.exports = {
   getApplicationById,
   updateApplication,
   deleteApplication,
+  view_my_applications,
+  evaluateTemporaryGrade,
 };
 
 // evaluate result
