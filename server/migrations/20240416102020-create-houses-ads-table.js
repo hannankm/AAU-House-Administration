@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("Houses", {
+    await queryInterface.createTable("houses", {
       house_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -18,12 +18,15 @@ module.exports = {
       },
       site: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       block: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       floor: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       rent: {
         type: Sequelize.DECIMAL(10, 2),
@@ -31,15 +34,19 @@ module.exports = {
       },
       bed_cap: {
         type: Sequelize.INTEGER,
+        allowNull: false,
       },
       woreda: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       kebele: {
         type: Sequelize.INTEGER,
+        allowNull: false,
       },
       house_number: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       createdAt: {
         allowNull: false,
@@ -53,7 +60,7 @@ module.exports = {
       },
     });
 
-    await queryInterface.createTable("Adverstisements", {
+    await queryInterface.createTable("advertisements", {
       ad_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -61,22 +68,31 @@ module.exports = {
       },
       post_date: {
         type: Sequelize.DATE,
+        allowNull: false,
       },
       application_start_date: {
         type: Sequelize.DATE,
+        allowNull: false,
       },
       application_deadline: {
         type: Sequelize.DATE,
+        allowNull: false,
       },
       status: {
         type: Sequelize.STRING,
+        allowNull: false,
       },
       notes: {
         type: Sequelize.STRING,
+        allowNull: true,
       },
-      house_count: {
-        type: Sequelize.INTEGER,
-        defaultValue: 0,
+      tentative_result_announcement: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+      final_result_announcement: {
+        type: Sequelize.DATE,
+        allowNull: true,
       },
       createdAt: {
         allowNull: false,
@@ -89,7 +105,7 @@ module.exports = {
         defaultValue: Sequelize.fn("NOW"),
       },
     });
-    await queryInterface.createTable("HouseAdverstisements", {
+    await queryInterface.createTable("houseadvertisements", {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -98,7 +114,7 @@ module.exports = {
       ad_id: {
         type: Sequelize.UUID,
         references: {
-          model: "Adverstisements",
+          model: "advertisements",
           key: "ad_id",
         },
         onDelete: "CASCADE",
@@ -106,7 +122,7 @@ module.exports = {
       house_id: {
         type: Sequelize.UUID,
         references: {
-          model: "Houses",
+          model: "houses",
           key: "house_id",
         },
         onDelete: "CASCADE",
@@ -124,8 +140,8 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("Adverstisements");
-    await queryInterface.dropTable("HouseAdverstisements");
-    await queryInterface.dropTable("Houses");
+    await queryInterface.dropTable("advertisements");
+    await queryInterface.dropTable("houseadvertisements");
+    await queryInterface.dropTable("houses");
   },
 };

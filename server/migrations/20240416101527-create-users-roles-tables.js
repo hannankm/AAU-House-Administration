@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("Users", {
+    await queryInterface.createTable("users", {
       user_id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -17,7 +17,7 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      phone_number: {
+      surname: {
         type: Sequelize.STRING,
         allowNull: false,
       },
@@ -26,21 +26,44 @@ module.exports = {
         allowNull: false,
         unique: true,
       },
+      mobile_phone_number: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
+      },
       password: {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      gender: {
+        type: Sequelize.ENUM("Male", "Female"),
+        allowNull: true,
+      },
+      academic_title: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      office_room_number: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      office_phone_number: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
       },
     });
 
-    await queryInterface.createTable("Roles", {
+    await queryInterface.createTable("roles", {
       role_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -53,14 +76,16 @@ module.exports = {
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
       },
     });
 
-    await queryInterface.createTable("UserRoles", {
+    await queryInterface.createTable("userroles", {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -70,7 +95,7 @@ module.exports = {
       user_id: {
         type: Sequelize.UUID,
         references: {
-          model: "Users",
+          model: "users",
           key: "user_id",
         },
         onDelete: "CASCADE",
@@ -78,7 +103,7 @@ module.exports = {
       role_id: {
         type: Sequelize.INTEGER,
         references: {
-          model: "Roles",
+          model: "roles",
           key: "role_id",
         },
         onDelete: "CASCADE",
@@ -86,18 +111,56 @@ module.exports = {
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
+      },
+    });
+
+    await queryInterface.createTable("committees", {
+      id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        primaryKey: true,
+      },
+      position: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      date_of_assignment: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
+      },
+      UserId: {
+        type: Sequelize.UUID,
+        references: {
+          model: "users",
+          key: "user_id",
+        },
+        onDelete: "CASCADE",
+      },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
+      },
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.fn("NOW"),
       },
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("Roles");
-    await queryInterface.dropTable("Users");
-    await queryInterface.dropTable("UserRoles");
+    await queryInterface.dropTable("committees");
+    await queryInterface.dropTable("userroles");
+    await queryInterface.dropTable("roles");
+    await queryInterface.dropTable("users");
 
     /**
      * Add reverting commands here.

@@ -1,45 +1,34 @@
 "use strict";
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("Houses", {
+    await queryInterface.createTable("announcements", {
       id: {
+        allowNull: false,
+        primaryKey: true,
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true,
       },
-      type: {
+      title: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      status: {
-        type: Sequelize.STRING,
+      description: {
+        type: Sequelize.TEXT,
         allowNull: false,
       },
-      site: {
+      link: {
         type: Sequelize.STRING,
+        allowNull: true,
       },
-      block: {
-        type: Sequelize.STRING,
-      },
-      floor: {
-        type: Sequelize.STRING,
-      },
-      rent: {
-        type: Sequelize.DECIMAL(10, 2),
+      UserId: {
+        type: Sequelize.UUID,
+        references: {
+          model: "users",
+          key: "user_id",
+        },
         allowNull: false,
-      },
-      bed_cap: {
-        type: Sequelize.INTEGER,
-      },
-      woreda: {
-        type: Sequelize.STRING,
-      },
-      kebele: {
-        type: Sequelize.INTEGER,
-      },
-      house_number: {
-        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,
@@ -51,9 +40,11 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.fn("NOW"),
       },
+      // Add the foreign key
     });
   },
+
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("Houses");
+    await queryInterface.dropTable("announcements");
   },
 };
