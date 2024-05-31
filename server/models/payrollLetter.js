@@ -2,7 +2,7 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class Announcement extends Model {
+  class PayrollLetter extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -10,49 +10,42 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Announcement.belongsTo(models.User, {
+      PayrollLetter.belongsTo(models.User, {
         foreignKey: "UserId",
         as: "user",
       });
     }
   }
 
-  Announcement.init(
+  // college/ department "managing director", insitute, name, site, house number, current month & year, rent,
+  // lease -> tenant and house id
+
+  PayrollLetter.init(
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
+      status: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      link: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      UserId: {
+      lease_id: {
         type: DataTypes.UUID,
         references: {
-          model: "User",
-          key: "user_id",
+          model: "LeaseAgreement", // Assuming your User model is named 'User'
+          key: "id",
         },
         allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: "Announcement",
-      tableName: "announcements",
+      modelName: "PayrollLetter",
+      tableName: "payrollletters",
     }
   );
 
-  return Announcement;
+  return PayrollLetter;
 };
-
-// result complaint is announced here

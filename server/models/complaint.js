@@ -45,10 +45,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       category: {
+        // miscalculation, fake entries,
         type: DataTypes.STRING,
         allowNull: true,
       },
-      user_id: {
+      complaintant_id: {
         type: DataTypes.UUID,
         references: {
           model: "User",
@@ -57,6 +58,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       application_id: {
+        // enter the application id of yours or the you have doubts on
         type: DataTypes.UUID,
         references: {
           model: "Application",
@@ -64,14 +66,24 @@ module.exports = (sequelize, DataTypes) => {
         },
         allowNull: true,
       },
+      tenant_id: {
+        type: DataTypes.UUID,
+        references: {
+          model: "User",
+          key: "user_id",
+        },
+        // enter the user email/ name of the user/ tenant have doubts on  (name, dept)
+        allowNull: true,
+      },
     },
     {
       sequelize,
       modelName: "Complaint",
+      tableName: "complaints",
     }
   );
 
   return Complaint;
 };
 
-// temporary result announcement date
+// temporary result announcement date in

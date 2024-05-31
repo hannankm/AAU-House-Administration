@@ -2,7 +2,7 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class Announcement extends Model {
+  class MovePermit extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -10,36 +10,38 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Announcement.belongsTo(models.User, {
-        foreignKey: "UserId",
+      MovePermit.belongsTo(models.User, {
+        foreignKey: "tenant_id",
         as: "user",
       });
     }
   }
 
-  Announcement.init(
+  // college/ department managing director, insitute, name, site, house number, current month & year, rent,
+  // lease -> tenant and house id - based on application
+
+  MovePermit.init(
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
+      status: {
+        // pending, accepted
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
-        type: DataTypes.TEXT,
+      type: {
+        // move in or out
+        type: DataTypes.STRING,
         allowNull: false,
       },
-      link: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      UserId: {
+      tenant_id: {
+        // then see the lease agreement they currently have active to get lease agreement.
         type: DataTypes.UUID,
         references: {
-          model: "User",
+          model: "User", // Assuming your User model is named 'User'
           key: "user_id",
         },
         allowNull: false,
@@ -47,12 +49,14 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: "Announcement",
-      tableName: "announcements",
+      modelName: "MovePermit",
+      tableName: "movepermits",
     }
   );
 
-  return Announcement;
+  return MovePermit;
 };
 
-// result complaint is announced here
+// move in requested by tenant
+// move out letter provided only if house return inspection is approved
+// on request generate file to be exported

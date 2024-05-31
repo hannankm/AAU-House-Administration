@@ -1,8 +1,12 @@
+// create user with role primary & secondary commitee & position
+// give him temporary password  and email him to change paswword
+// date of assignment, and position
+
 "use strict";
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class Announcement extends Model {
+  class Committee extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -10,36 +14,34 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Announcement.belongsTo(models.User, {
+      Committee.belongsTo(models.User, {
         foreignKey: "UserId",
         as: "user",
+        constraints: false,
+        onDelete: "CASCADE",
       });
     }
   }
 
-  Announcement.init(
+  Committee.init(
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
+      position: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
+      date_of_assignment: {
         type: DataTypes.TEXT,
         allowNull: false,
-      },
-      link: {
-        type: DataTypes.STRING,
-        allowNull: true,
       },
       UserId: {
         type: DataTypes.UUID,
         references: {
-          model: "User",
+          model: "users",
           key: "user_id",
         },
         allowNull: false,
@@ -47,12 +49,15 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: "Announcement",
-      tableName: "announcements",
+      modelName: "Committee",
+      tableName: "committees",
     }
   );
 
-  return Announcement;
+  return Committee;
 };
 
-// result complaint is announced here
+// when date has passed two years inform VP, delete committe role
+// assign all comite members as it usded to be eg: head of housing and all have thier positions stated
+// make them appear by default as in as recomended comite members then when clicking on add it automaticlly sends them an email like regular comite members
+// then additional functionaliites added to their sidebar menu based on role

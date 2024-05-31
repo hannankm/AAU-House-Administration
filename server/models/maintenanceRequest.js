@@ -2,7 +2,7 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class Announcement extends Model {
+  class MaintenanceRequest extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -10,36 +10,36 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Announcement.belongsTo(models.User, {
+      MaintenanceRequest.belongsTo(models.User, {
         foreignKey: "UserId",
         as: "user",
       });
     }
   }
 
-  Announcement.init(
+  MaintenanceRequest.init(
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
+      room: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
+      problem_faced: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
-      link: {
+      status: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
       },
       UserId: {
         type: DataTypes.UUID,
         references: {
-          model: "User",
+          model: "User", // Assuming your User model is named 'User'
           key: "user_id",
         },
         allowNull: false,
@@ -47,12 +47,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: "Announcement",
-      tableName: "announcements",
+      modelName: "MaintenanceRequest",
+      tableName: "maintenancerequests",
     }
   );
 
-  return Announcement;
+  return MaintenanceRequest;
 };
-
-// result complaint is announced here

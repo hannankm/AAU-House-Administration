@@ -1,7 +1,7 @@
 "use strict";
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class HouseAdverstisement extends Model {
+  class HouseAdvertisement extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -9,18 +9,18 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      HouseAdverstisement.belongsTo(models.House, {
+      HouseAdvertisement.belongsTo(models.House, {
         foreignKey: "house_id",
         onDelete: "CASCADE",
       });
-      HouseAdverstisement.belongsTo(models.Adverstisement, {
+      HouseAdvertisement.belongsTo(models.Advertisement, {
         foreignKey: "ad_id",
         onDelete: "CASCADE",
       });
-      HouseAdverstisement.hasMany(models.Application);
+      HouseAdvertisement.hasMany(models.Application);
     }
   }
-  HouseAdverstisement.init(
+  HouseAdvertisement.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -30,22 +30,23 @@ module.exports = (sequelize, DataTypes) => {
       ad_id: {
         type: DataTypes.UUID,
         references: {
-          model: "Houses",
+          model: "House",
           key: "house_id",
         },
       },
       house_id: {
         type: DataTypes.UUID,
         references: {
-          model: "Adverstisements",
+          model: "Advertisement",
           key: "ad_id",
         },
       },
     },
     {
       sequelize,
-      modelName: "HouseAdverstisement",
+      modelName: "HouseAdvertisement",
+      tableName: "houseadvertisements",
     }
   );
-  return HouseAdverstisement;
+  return HouseAdvertisement;
 };

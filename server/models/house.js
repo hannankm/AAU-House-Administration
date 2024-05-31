@@ -9,8 +9,8 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      House.belongsToMany(models.Adverstisement, {
-        through: "HouseAdverstisement",
+      House.belongsToMany(models.Advertisement, {
+        through: "HouseAdvertisement",
         as: "advertisements",
         foreignKey: "house_id",
       });
@@ -24,10 +24,12 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
       },
       type: {
+        // federal or aau
         type: DataTypes.STRING,
         allowNull: false,
       },
       status: {
+        // occupied, empty,
         type: DataTypes.STRING,
         allowNull: false,
       },
@@ -35,20 +37,39 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      block: DataTypes.STRING,
-      floor: DataTypes.STRING,
+      block: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      floor: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       rent: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
-      bed_cap: DataTypes.INTEGER,
-      woreda: DataTypes.STRING,
-      kebele: DataTypes.INTEGER,
-      house_number: DataTypes.STRING,
+      bed_cap: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      woreda: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      kebele: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      house_number: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     },
     {
       sequelize,
       modelName: "House",
+      tableName: "houses",
     }
   );
   return House;

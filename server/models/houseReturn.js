@@ -2,7 +2,7 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class Announcement extends Model {
+  class HouseReturn extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -10,33 +10,38 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Announcement.belongsTo(models.User, {
-        foreignKey: "UserId",
+      HouseReturn.belongsTo(models.User, {
+        foreignKey: "tenant_id",
         as: "user",
       });
     }
   }
 
-  Announcement.init(
+  // college/ department managing director, insitute, name, site, house number, current month & year, rent,
+  // lease -> tenant and house id
+
+  HouseReturn.init(
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      title: {
+      status: {
+        // pending, inspection date set, approved, accepted
         type: DataTypes.STRING,
         allowNull: false,
       },
-      description: {
-        type: DataTypes.TEXT,
+      reason: {
+        type: DataTypes.STRING,
         allowNull: false,
       },
-      link: {
+      date_range_for_inspection: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
       },
-      UserId: {
+      tenant_id: {
+        // then see the lease agreement they currently have active to get lease agreement.
         type: DataTypes.UUID,
         references: {
           model: "User",
@@ -47,12 +52,14 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: "Announcement",
-      tableName: "announcements",
+      modelName: "HouseReturn",
+      tableName: "housereturns",
     }
   );
 
-  return Announcement;
+  return HouseReturn;
 };
 
-// result complaint is announced here
+// result -> lease terminated, house available, & user role & spouse role applicant
+
+// move out after house is inspected then return house/ keys

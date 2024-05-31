@@ -1,0 +1,66 @@
+lease agreement
+payroll leter
+comite
+tenant
+applicant
+result complaint
+complaint
+maintenance request
+report
+move in/ move out
+house return
+announcement
+document \
+
+functionalities
+
+- head of housing
+- facility
+- team leader
+- president
+- vice president
+- sec committee
+- pri committee
+
+report -- final round
+
+complaint _
+maintenance request _
+result complaint \_
+commitee - date of assignment (user role creation date)
+move in/ move out _
+lease agreement \_
+house return request _
+payroll letter \*
+
+Return house -- move out permit
+
+in order to move out from the house you need to get an approved house return request first.
+
+class
+
+- link lease and application
+- link lease and payroll & delete tenant & payroll link
+
+tasks
+
+- jwt Auth, role auth
+- check model constraints
+- migrate
+- controller & route CRUD
+- test
+-
+
+- additional controller methods
+
+-
+
+- comite model, for primary & secondary and controllers and routes to create comite memmber
+- then jwt authentication send role and user id
+- then role based authorization & route protection
+- send errors if not authorized
+- in login in the frontend destructure the jwt token cookie so can do validation and redirect to role based home page .
+
+jwt generation on login and register
+role based route protection
+CRUD controllers and routes based on auth bearer
