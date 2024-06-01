@@ -5,6 +5,7 @@ const jwtGenerator = require("../utils/jwtGenerator");
 const User = require("../models").User;
 const Role = require("../models").Role;
 const UserRole = require("../models").UserRole;
+const jwt = require("jsonwebtoken"); // Make sure jwt is imported
 
 const register = async (req, res) => {
   try {
@@ -102,8 +103,87 @@ const logout = (req, res) => {
   });
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ error: "Incorrect old password" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getMyProfile = async (req, res) => {
+  try {
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
+    const user_id = decodedToken.user_id;
+    const user = await User.findByPk(user_id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
+    const user_id = decodedToken.user_id;
+    const [updatedRowsCount, updatedUsers] = await User.update(req.body, {
+      where: { user_id: user_id },
+      returning: true,
+    });
+
+    if (updatedRowsCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(updatedUsers[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 module.exports = {
   register,
   login,
   logout,
+  changePassword,
+  getMyProfile,
+  updateProfile,
 };
+
+// change password
+// my profile
