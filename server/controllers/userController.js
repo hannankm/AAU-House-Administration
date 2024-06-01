@@ -1,24 +1,35 @@
-// controllers/UserController.js
-const User = require("../models").User;
-const { House } = require("../models"); // Import your House model
+const { User } = require("../models");
 const jwt = require("jsonwebtoken");
 
 const createUser = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; // Assuming JWT is sent in the Authorization header
-    const decodedToken = jwt.verify(token, "your_jwt_secret_key"); // Replace 'your_jwt_secret_key' with your actual JWT secret key
-    const user_id = decodedToken.user_id;
-    // find active lease id for this user id
-    const lease_id = user_id;
-    const { status } = req.body;
+    const {
+      first_name,
+      last_name,
+      surname,
+      email,
+      password,
+      academic_title,
+      mobile_phone_number,
+      office_phone_number,
+      office_room_number,
+      gender,
+    } = req.body;
 
-    const User = await User.create({
-      status,
-      type,
-      lease_id,
+    const newUser = await User.create({
+      first_name,
+      last_name,
+      surname,
+      email,
+      password,
+      academic_title,
+      mobile_phone_number,
+      office_phone_number,
+      office_room_number,
+      gender,
     });
 
-    res.status(201).json({ message: "User created successfully", User });
+    res.status(201).json({ message: "User created successfully", newUser });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -26,9 +37,8 @@ const createUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
   try {
-    const Users = await User.findAll();
-
-    res.status(200).json({ Users });
+    const users = await User.findAll();
+    res.status(200).json({ users });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -37,14 +47,13 @@ const getUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = await User.findByPk(id);
 
-    const User = await User.findByPk(id);
-
-    if (!User) {
+    if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.status(200).json({ User });
+    res.status(200).json({ user });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -54,7 +63,7 @@ const updateUser = async (req, res) => {
   const { id } = req.params;
   try {
     const [updatedRowsCount, updatedUsers] = await User.update(req.body, {
-      where: { ad_id: id },
+      where: { user_id: id },
       returning: true,
     });
 
@@ -72,7 +81,7 @@ const deleteUser = async (req, res) => {
   const { id } = req.params;
   try {
     const deletedRowCount = await User.destroy({
-      where: { ad_id: id },
+      where: { user_id: id },
     });
 
     if (deletedRowCount === 0) {
@@ -92,6 +101,3 @@ module.exports = {
   updateUser,
   deleteUser,
 };
-
-// crud user
-// create user with user role primary commitee, secondary commitee & validate the user's role.
