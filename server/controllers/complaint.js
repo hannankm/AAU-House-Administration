@@ -6,25 +6,31 @@ const jwt = require("jsonwebtoken");
 
 const createComplaint = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; // Assuming JWT is sent in the Authorization header
-    const decodedToken = jwtrew.verify(token, "your_jwt_secret_key"); // Replace 'your_jwt_secret_key' with your actual JWT secret key
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
     const user_id = decodedToken.user_id;
-    const { title, type, description, status, category, application_id } =
+    const { title, type, description, category, application_id, tenant_id } =
       req.body;
 
-    const Complaint = await Complaint.create({
+    const complaint = await Complaint.create({
       title,
       type,
       description,
-      status,
+      status: "pending",
       category,
-      user_id,
+      complaintant_id: user_id,
       application_id,
+      tenant_id,
     });
 
     res
       .status(201)
-      .json({ message: "Complaint created successfully", Complaint });
+      .json({ message: "Complaint created successfully", complaint });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -32,9 +38,9 @@ const createComplaint = async (req, res) => {
 
 const getComplaints = async (req, res) => {
   try {
-    const Complaints = await Complaint.findAll();
+    const complaints = await Complaint.findAll();
 
-    res.status(200).json({ Complaints });
+    res.status(200).json({ complaints });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -44,13 +50,13 @@ const getComplaintById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const Complaint = await Complaint.findByPk(id);
+    const complaint = await Complaint.findByPk(id);
 
     if (!Complaint) {
       return res.status(404).json({ error: "Complaint not found" });
     }
 
-    res.status(200).json({ Complaint });
+    res.status(200).json({ complaint });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -62,7 +68,7 @@ const updateComplaint = async (req, res) => {
     const [updatedRowsCount, updatedComplaints] = await Complaint.update(
       req.body,
       {
-        where: { ad_id: id },
+        where: { id: id },
         returning: true,
       }
     );
@@ -81,7 +87,7 @@ const deleteComplaint = async (req, res) => {
   const { id } = req.params;
   try {
     const deletedRowCount = await Complaint.destroy({
-      where: { ad_id: id },
+      where: { id: id },
     });
 
     if (deletedRowCount === 0) {

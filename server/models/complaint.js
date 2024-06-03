@@ -11,8 +11,8 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Complaint.belongsTo(models.User, {
-        foreignKey: "user_id",
-        as: "user",
+        foreignKey: "complaintant_id",
+        as: "complaintant",
       });
       Complaint.belongsTo(models.Application, {
         foreignKey: "application_id",
@@ -72,7 +72,6 @@ module.exports = (sequelize, DataTypes) => {
           model: "User",
           key: "user_id",
         },
-        // enter the user email/ name of the user/ tenant have doubts on  (name, dept)
         allowNull: true,
       },
     },
