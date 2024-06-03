@@ -2,6 +2,8 @@
 // get applications by user
 // get applications by house ad
 const Application = require("../models").Application;
+const HouseAdvertisement = require("../models").HouseAdvertisement;
+const Advertisement = require("../models").Advertisement;
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const { where } = require("sequelize");
@@ -134,9 +136,29 @@ const deleteApplication = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 const evaluateTemporaryGrade = (application) => {
   let temporary_grade = 0;
+
+  if (application.gender == "F") {
+    temporary_grade += 5;
+  }
+  if (application.disability != "None") {
+    temporary_grade += 10;
+  }
+  if (application.family_size > 4) {
+  } else if (application.family_size > 3) {
+  } else {
+  }
+  if (application.position == "") {
+  } else if ((application.position = "")) {
+  } else {
+  }
+
+  if (application.is_spouse_staff) {
+    temporary_grade += 20;
+  }
+  if (application.academic_title == "") {
+  }
 
   // application.gender == F +5
   // if disability == yes +10
@@ -145,23 +167,73 @@ const evaluateTemporaryGrade = (application) => {
   // acadmic title
   // family size ==
   // if spouse is staff
-
-  // application.
-  // Your logic for evaluating temporary grade
-  // This could involve calculations based on application data
-  // Return the evaluated temporary grade
-  // update applciation grade
-  // 
 };
 
-// rank then announce
-const rank_applicants = (house_ad) => {
-  // based on temporary grade sort descending order if equal points
-  // disable person first
-  // then female first
-  // then at random
+const generateTemporaryResults = async (req, res) => {
+  try {
+    // Extract advertisement ID from request parameters
+    const { adId } = req.params;
+    const ad = await Advertisement.findByPk(id);
+
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application }],
+    });
+
+    if (ad.status != "documents verified") {
+      let allApplicationsProcessed = true;
+
+      // Iterate through each house advertisement
+      for (const houseAd of houseAdvertisements) {
+        // Check if there are any pending applications
+        const hasPendingApplications = houseAd.Applications.some(
+          (application) => application.status === "pending"
+        );
+
+        if (hasPendingApplications) {
+          allApplicationsProcessed = false;
+          break; // Exit the loop early if any pending applications are found
+        }
+      }
+
+      if (!allApplicationsProcessed) {
+        return res.status(400).json({
+          message:
+            "Temporary results cannot be generated because some applications are still pending.",
+        });
+      } else {
+        await ad.update({ status: "documents verified" });
+      }
+    }
+    // Initialize a flag to check if all applications are not pending
+
+    // Iterate through each house advertisement
+    for (const houseAd of houseAdvertisements) {
+      // Iterate through each application in the house advertisement
+      for (const application of houseAd.Applications) {
+        if (
+          application.status == "document verified" &&
+          application.document_verified
+        ) {
+          // Evaluate temporary grade and update the application
+          const temporaryGrade = evaluateTemporaryGrade(application);
+          await application.update({ temporary_grade: temporaryGrade });
+        }
+      }
+      // update ad status to results generated
+    }
+    await ad.update({ status: "temporary results generated" });
+
+    res
+      .status(200)
+      .json({ message: "Temporary results generated successfully." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
+// view ads listed by
 const view_my_applications = async (req, res) => {
   try {
     const authorizationHeader = req.header("Authorization");
@@ -193,7 +265,7 @@ module.exports = {
   updateApplication,
   deleteApplication,
   view_my_applications,
-  evaluateTemporaryGrade,
+  generateTemporaryResults,
 };
 
 // evaluate result

@@ -20,6 +20,7 @@ module.exports = (sequelize, DataTypes) => {
 
       Application.belongsTo(models.HouseAdvertisement, {
         foreignKey: "HouseAdvertisementId",
+        as: "applications",
       });
 
       Application.hasMany(models.Document, {
