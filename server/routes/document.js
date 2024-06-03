@@ -15,9 +15,14 @@ router.post(
   ]),
   documentController.createDocument
 );
+router.get(
+  "/verification",
+  documentController.getApplicationsWithGroupedDocuments
+);
 router.get("/", documentController.getDocuments);
 router.get("/:id", documentController.getDocumentById);
 router.put("/:id", documentController.updateDocument);
 router.delete("/:id", documentController.deleteDocument);
+router.post("/verify/:application_id", documentController.verifyDocuments);
 
 module.exports = router;

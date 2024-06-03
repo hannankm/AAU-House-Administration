@@ -1,5 +1,8 @@
 const Document = require("../models").Document;
 const Application = require("../models").Application;
+const User = require("../models").User;
+const jwt = require("jsonwebtoken");
+
 const upload = require("../utils/multer");
 
 const createDocument = async (req, res) => {
@@ -97,7 +100,7 @@ const updateDocument = async (req, res) => {
     const [updatedRowsCount, updatedDocuments] = await Document.update(
       req.body,
       {
-        where: { ad_id: id },
+        where: { id: id },
         returning: true,
       }
     );
@@ -116,7 +119,7 @@ const deleteDocument = async (req, res) => {
   const { id } = req.params;
   try {
     const deletedRowCount = await Document.destroy({
-      where: { ad_id: id },
+      where: { id: id },
     });
 
     if (deletedRowCount === 0) {
@@ -129,15 +132,116 @@ const deleteDocument = async (req, res) => {
   }
 };
 
-const verifyDocument = async (req, res) => {
-  const { id } = req.params;
+const verifyDocuments = async (req, res) => {
+  const { application_id } = req.params;
+  const { verifiedDocuments, updateApplicationFields } = req.body;
+
   try {
-    // if faulty application documents -> either disqualify or update application and proceed
-    // disability , birth certificate,
-    // application status -> documents_verified or disqualified
-    // check with application form
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
+    const verifier_id = decodedToken.user_id;
+    // Retrieve the application and all its documents
+    const application = await Application.findByPk(application_id, {
+      include: [{ model: Document, as: "documents" }],
+    });
+
+    if (!application) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+
+    // Verify each document
+    for (const doc of application.documents || []) {
+      const verifiedDocument = verifiedDocuments.find((d) => d.id === doc.id);
+
+      if (verifiedDocument) {
+        doc.verification_status = verifiedDocument.verified
+          ? "verified"
+          : "unverified";
+        doc.verified_by = verifier_id;
+        await doc.save();
+        console.log(
+          `Document ID: ${doc.id}, Status: ${doc.verification_status}`
+        );
+
+        if (!verifiedDocument.verified) {
+          application.status = "disqualified";
+        }
+      }
+    }
+
+    // Update the application fields if specified
+    if (updateApplicationFields && application.status !== "disqualified") {
+      Object.keys(updateApplicationFields).forEach((field) => {
+        application[field] = updateApplicationFields[field];
+      });
+      await application.save();
+    }
+
+    // Check if all documents are verified
+    const allDocumentsVerified = (application.documents || []).every(
+      (doc) => doc.verification_status === "verified"
+    );
+    if (allDocumentsVerified) {
+      application.status == "documents verified";
+      application.document_verified = true;
+    }
+    await application.save();
+
+    res.json({ success: true, application });
   } catch (error) {
-    res.json({ error: error.message });
+    console.error("Error verifying documents:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const getApplicationsWithGroupedDocuments = async (req, res) => {
+  const { page = 1, limit = 10, status } = req.query;
+
+  const offset = (page - 1) * limit;
+  const where = status ? { status } : {};
+  try {
+    const { rows: applications, count } = await Application.findAndCountAll({
+      where,
+      include: [
+        { model: Document, as: "documents" },
+        {
+          model: User,
+          as: "applicant",
+        },
+      ],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    const applicationsWithGroupedDocuments = applications.map((application) => {
+      const groupedDocuments = (application.documents || []).reduce(
+        (groups, document) => {
+          if (!groups[document.title]) {
+            groups[document.title] = [];
+          }
+          groups[document.title].push(document);
+          return groups;
+        },
+        {}
+      );
+      const { documents, ...applicationWithoutDocuments } =
+        application.toJSON();
+
+      return {
+        ...applicationWithoutDocuments,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+        groupedDocuments,
+      };
+    });
+
+    res.json({ success: true, applications: applicationsWithGroupedDocuments });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -147,11 +251,6 @@ module.exports = {
   getDocumentById,
   updateDocument,
   deleteDocument,
-  verifyDocument,
+  getApplicationsWithGroupedDocuments,
+  verifyDocuments,
 };
-
-// what are all the files necesary
-// Birth certificate
-// marital certificate
-// hr letter
-//
