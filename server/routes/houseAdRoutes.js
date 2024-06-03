@@ -18,3 +18,7 @@ router.get(
 );
 
 module.exports = router;
+
+// delete house entry
+// add
+// view

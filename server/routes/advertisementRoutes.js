@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const advertisementController = require("../controllers/advertisementController");
+const authorization = require("../middlewares/authorization");
 
 // Define routes
 router.post("/", advertisementController.createAdvertisement);
@@ -36,5 +37,18 @@ router.get(
   "/status/:status",
   advertisementController.getAdvertisementsByStatus
 );
+router.get(
+  "/temporary-results/:adId",
+  advertisementController.viewTemporaryAdResults
+);
+router.get(
+  "/preview/temporary-results/:adId",
+  advertisementController.rankByTemporaryGrade
+);
+router.get(
+  "/announce/temporary-results/:adId",
+  advertisementController.announceTemporaryAdResults
+);
+router.get("/overview/:adId", advertisementController.getTemporaryAdOverview);
 
 module.exports = router;

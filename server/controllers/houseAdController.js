@@ -79,6 +79,56 @@ const getAdvertisementsByHouseId = async (req, res) => {
   }
 };
 
+// view results by house ad
+const rankByTemporaryGrade = async (req, res) => {
+  try {
+    const { houseAd_id } = req.params;
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisement = await HouseAdvertisement.findAll({
+      where: { id: houseAd_id },
+      include: [{ model: Application }],
+    });
+
+    // Iterate through each house advertisement
+    const sortedApplications = [];
+
+    // Sort only if temporary grade is available and application status is "document_verified"
+    if (
+      houseAdvertisement.Applications.every(
+        (app) =>
+          app.temporary_grade &&
+          app.status === "document_verified" &&
+          app.document_verified === "verified"
+      )
+    ) {
+      // Sort applications by temporary grade descending, then apply tie-breaking rules
+      sortedApplications = houseAdvertisement.Applications.sort((a, b) => {
+        if (b.temporary_grade !== a.temporary_grade) {
+          return b.temporary_grade - a.temporary_grade;
+        }
+        if (b.disability && !a.disability) {
+          return 1;
+        }
+        if (!b.disability && a.disability) {
+          return -1;
+        }
+        if (b.gender === "Female" && a.gender !== "Female") {
+          return 1;
+        }
+        if (a.gender === "Female" && b.gender !== "Female") {
+          return -1;
+        }
+        // Random tie-breaker
+        return Math.random() - 0.5;
+      });
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   createHouseAdvertisement,
   getHousesByAdvertisementId,

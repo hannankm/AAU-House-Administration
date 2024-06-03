@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const announcementController = require("../controllers/announcements");
+const authorization = require("../middlewares/authorization");
 
 // Define routes
 

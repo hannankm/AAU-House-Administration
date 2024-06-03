@@ -1,5 +1,10 @@
 const Advertisement = require("../models").Advertisement;
 const { House } = require("../models");
+const HouseAdvertisement = require("../models").HouseAdvertisement;
+const Application = require("../models").Application;
+
+const { Op, Sequelize } = require("sequelize");
+const { createAnnouncement } = require("./announcements");
 
 const createAdvertisement = async (req, res) => {
   try {
@@ -414,6 +419,314 @@ const postAdvertisement = async (req, res) => {
   }
 };
 
+// the page for evaluate, announce and preview
+const getTemporaryAdOverview = async (req, res) => {
+  try {
+    // Fetch the active ad
+    const { adId } = req.params;
+
+    const ad = await Advertisement.findOne({
+      where: {
+        ad_id: adId,
+      },
+    });
+
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: "Ad Not Found.",
+      });
+    }
+
+    const houseAds = await HouseAdvertisement.findAll({
+      where: { ad_id: ad.ad_id },
+      include: [
+        {
+          model: Application,
+          as: "applications",
+          attributes: [
+            "HouseAdvertisementId",
+            [
+              Sequelize.fn(
+                "COUNT",
+                Sequelize.col("applications.application_id")
+              ),
+              "total",
+            ],
+            [
+              Sequelize.fn(
+                "SUM",
+                Sequelize.literal(
+                  'CASE WHEN "applications"."status" = \'pending\' THEN 1 ELSE 0 END'
+                )
+              ),
+              "pending",
+            ],
+            [
+              Sequelize.fn(
+                "SUM",
+                Sequelize.literal(
+                  'CASE WHEN "applications"."status" = \'documents verified\' THEN 1 ELSE 0 END'
+                )
+              ),
+              "verified",
+            ],
+            [
+              Sequelize.fn(
+                "SUM",
+                Sequelize.literal(
+                  'CASE WHEN "applications"."status" = \'disqualified\' THEN 1 ELSE 0 END'
+                )
+              ),
+              "disqualified",
+            ],
+          ],
+          // Grouping by the id of HouseAdvertisement
+        },
+      ],
+      group: ["HouseAdvertisement.id", "applications.application_id"],
+    });
+
+    // Initialize response object
+    const response = {
+      ad: ad,
+      houseAds: [],
+      allVerified: true,
+    };
+
+    // Process each house ad
+    for (let houseAd of houseAds) {
+      // Extract aggregated application data
+      const applicationData = houseAd.applications || {
+        total: 0,
+        pending: 0,
+        verified: 0,
+        disqualified: 0,
+      };
+
+      // Determine if there are pending applications
+      const hasPending = applicationData.pending > 0;
+
+      // Update allVerified flag if there are pending applications
+      if (hasPending) {
+        response.allVerified = false;
+      }
+
+      // Add house ad info to response
+      response.houseAds.push({
+        houseAd,
+        statusCounts: {
+          pending: applicationData.pending,
+          verified: applicationData.verified,
+          disqualified: applicationData.disqualified,
+          total: applicationData.total,
+        },
+        allVerified: !hasPending,
+      });
+    }
+
+    // Send response
+    res.status(200).json({
+      success: true,
+      data: response,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error getting ad.",
+      error: error.message,
+      details: error,
+    });
+  }
+};
+
+// preview result
+const rankByTemporaryGrade = async (req, res) => {
+  try {
+    const { adId } = req.params;
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application }],
+    });
+
+    // Prepare a response object grouped by house advertisement ID
+    const response = {};
+
+    // Iterate through each house advertisement
+    for (const houseAd of houseAdvertisements) {
+      const sortedApplications = [];
+
+      // Sort only if temporary grade is available and application status is "document_verified"
+      if (
+        houseAd.Applications.every(
+          (app) =>
+            app.temporary_grade &&
+            app.status === "document_verified" &&
+            app.document_verified === "verified"
+        )
+      ) {
+        // Sort applications by temporary grade descending, then apply tie-breaking rules
+        sortedApplications = houseAd.Applications.sort((a, b) => {
+          if (b.temporary_grade !== a.temporary_grade) {
+            return b.temporary_grade - a.temporary_grade;
+          }
+          if (b.disability && !a.disability) {
+            return 1;
+          }
+          if (!b.disability && a.disability) {
+            return -1;
+          }
+          if (b.gender === "Female" && a.gender !== "Female") {
+            return 1;
+          }
+          if (a.gender === "Female" && b.gender !== "Female") {
+            return -1;
+          }
+          // Random tie-breaker
+          return Math.random() - 0.5;
+        });
+      }
+
+      response[houseAd.ad_id] = sortedApplications;
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// get ranked applications by house ad
+// who posts this announcement? head or vice
+const announceTemporaryAdResults = async (req, res) => {
+  try {
+    const { adId } = req.params;
+
+    // Find the advertisement by ID
+    const ad = await Advertisement.findOne({ where: { id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ error: "Advertisement not found." });
+    }
+
+    // Create the announcement based on the ad details
+    // Create the announcement request object
+    const announcementReq = {
+      header: req.header.bind(req), // to pass the authorization header
+      body: {
+        title: `Results for ${ad.title}`,
+        description: `The temporary results for the housing advertisements posted on "${ad.post_date}" have been announced. Please check the results at the provided link.`,
+        link: "/temporary-results/" + ad.ad_id,
+      },
+    };
+
+    // Use a custom response object to capture the createAnnouncement response
+    const announcementRes = {
+      status: (statusCode) => ({
+        json: (response) => {
+          announcementRes.statusCode = statusCode;
+          announcementRes.response = response;
+        },
+      }),
+      statusCode: null,
+      response: null,
+    };
+
+    // Call the createAnnouncement method
+    await createAnnouncement(announcementReq, announcementRes);
+
+    // Check if the announcement was created successfully
+    if (announcementRes.statusCode !== 201) {
+      return res
+        .status(announcementRes.statusCode)
+        .json(announcementRes.response);
+    }
+
+    // Update the ad status to "temporary results announced"
+    await ad.update({ status: "temporary results announced" });
+
+    res.status(201).json({
+      message: "Announcement created and ad status updated successfully.",
+      announcement: announcementRes.response.announcement,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// get ad based on temporary grade (vice )
+// get ad, house ads, application by status count, all_applications_are not_pending flag (to disable the evaluate/ view/ announce result button)
+
+// get ranked applications by house ad
+const viewTemporaryAdResults = async (req, res) => {
+  try {
+    const { adId } = req.params;
+    const ad = await Advertisement.findOne({ where: { id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ error: "Advertisement not found." });
+    }
+
+    // Check if the ad status is "temporary results announced"
+    if (ad.status !== "temporary results announced") {
+      return res
+        .status(400)
+        .json({ error: "Temporary results not announced yet." });
+    }
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application }],
+    });
+
+    // Prepare a response object grouped by house advertisement ID
+    const response = {};
+
+    // Iterate through each house advertisement
+    for (const houseAd of houseAdvertisements) {
+      const sortedApplications = [];
+
+      // Sort only if temporary grade is available and application status is "document_verified"
+      if (
+        houseAd.Applications.every(
+          (app) =>
+            app.temporary_grade &&
+            app.status === "document_verified" &&
+            app.document_verified === "verified"
+        )
+      ) {
+        // Sort applications by temporary grade descending, then apply tie-breaking rules
+        sortedApplications = houseAd.Applications.sort((a, b) => {
+          if (b.temporary_grade !== a.temporary_grade) {
+            return b.temporary_grade - a.temporary_grade;
+          }
+          if (b.disability && !a.disability) {
+            return 1;
+          }
+          if (!b.disability && a.disability) {
+            return -1;
+          }
+          if (b.gender === "Female" && a.gender !== "Female") {
+            return 1;
+          }
+          if (a.gender === "Female" && b.gender !== "Female") {
+            return -1;
+          }
+          // Random tie-breaker
+          return Math.random() - 0.5;
+        });
+      }
+
+      response[houseAd.ad_id] = sortedApplications;
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   createAdvertisement,
   getAdvertisements,
@@ -429,9 +742,20 @@ module.exports = {
   postAdvertisement,
   rejectByDirector,
   rejectByPresident,
+  announceTemporaryAdResults,
+  rankByTemporaryGrade,
+  viewTemporaryAdResults,
+  getTemporaryAdOverview,
 };
 
 // no two active ads at a time
 
 // get rejected ads for head then update it
 // status - application closed
+
+// send complaints
+// get complaints and make changes
+// rank by final result
+// announce final result
+// sign lease
+// be tenant and tenant features
