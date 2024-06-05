@@ -1,8 +1,20 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { logo } from "../assets";
+import { getRole } from "../utils/auth";
+import { applicantMenu, guestMenu, tenantMenu } from "../constants/menuItems";
 
 const Navbar = () => {
+  const role = getRole();
+  let menu = [];
+  if (role === "applicant") {
+    menu = applicantMenu;
+  } else if (role === "tenant") {
+    menu = applicantMenu + tenantMenu;
+  } else {
+    menu = guestMenu;
+  }
+
   return (
     <nav className="bg-blue p-4">
       <div className="mx-auto flex justify-between items-center">
@@ -28,7 +40,7 @@ const Navbar = () => {
             to="/about"
             className="text-white hover:text-gray-300 transition duration-300"
           >
-            Results
+            Announcements
           </NavLink>
           <NavLink
             to="/about"

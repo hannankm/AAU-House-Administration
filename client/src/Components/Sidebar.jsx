@@ -1,22 +1,45 @@
 import React, { useState } from "react";
 // import { logo, signoutIcon } from "../assets";
-import { menuItems, presidentMenu, directorMenu } from "../constants/menuItems";
+import {
+  presidentMenu,
+  directorMenu,
+  headMenu,
+  teamLeaderMenu,
+  facilityDirectorMenu,
+  vicePresMenu,
+  secondaryCommitteeMenu,
+  primaryCommitteeMenu,
+} from "../constants/menuItems";
 import { Link } from "react-router-dom";
 // import { useAuth } from "../hooks/useAuth";
 import Logout from "../Pages/Common_Pages/logout";
 import { logo } from "../assets";
 //icons for last menu items
+import { getRole } from "../utils/auth";
 //
-function Sidebar({ active, role }) {
-  let menu = "";
+function Sidebar({ active }) {
+  const role = getRole();
+
+  let menu = [];
   if (role === "head") {
-    menu = menuItems;
+    menu = headMenu;
   } else if (role === "president") {
     menu = presidentMenu;
+  } else if (role === "teamleader") {
+    menu = teamLeaderMenu;
+  } else if (role === "facilitydirector") {
+    menu = facilityDirectorMenu;
+  } else if (role === "vicepresident") {
+    menu = vicePresMenu;
+  } else if (role === "secondarycommittee") {
+    menu = secondaryCommitteeMenu;
+  } else if (role === "primarycommittee") {
+    menu = primaryCommitteeMenu;
   } else {
     menu = directorMenu;
   }
-  //   const { setAuth } = useAuth();
+
+  // menu = menu + CommonMenu;  //   const { setAuth } = useAuth();
   const [isActive, setActive] = useState(active);
   const [isLogoutOpen, setLogoutOpen] = useState(false);
   function handleClick(title) {
@@ -30,18 +53,7 @@ function Sidebar({ active, role }) {
   function closeLogout() {
     setLogoutOpen(false);
   }
-  const getRoleTitle = (role) => {
-    switch (role) {
-      case "head":
-        return "Head of Housing";
-      case "director":
-        return "Facility Director";
-      case "president":
-        return "President";
-      default:
-        return "Unknown Role";
-    }
-  };
+
   return (
     <div className="bg-blue h-screen font-poppins overflow-hidden justify-center">
       <div className="flex py-5 px-3 justify-center">
@@ -49,7 +61,7 @@ function Sidebar({ active, role }) {
         <div className="flex flex-col">
           <h1 className="hidden lg:inline text-4xl text-white">AAU.</h1>
           <p className="hidden lg:inline text-xs leading-none text-grey">
-            {getRoleTitle(role)} Dashboard
+            {role} Dashboard
           </p>
         </div>
       </div>
