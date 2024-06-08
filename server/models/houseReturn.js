@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
       },
       status: {
-        // pending, inspection date set, approved, accepted
+        // pending, inspection date set, approved, accepted, returned
         type: DataTypes.STRING,
         allowNull: false,
       },
@@ -63,3 +63,6 @@ module.exports = (sequelize, DataTypes) => {
 // result -> lease terminated, house available, & user role & spouse role applicant
 
 // move out after house is inspected then return house/ keys
+// add retunrn date
+// when approved get lease id by active tenant id then make house empty & set return date & status to approved
+// get house return where tenant id = applicant id and status = returned

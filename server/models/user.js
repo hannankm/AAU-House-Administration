@@ -1,5 +1,6 @@
 "use strict";
 const { Model } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -18,7 +19,23 @@ module.exports = (sequelize, DataTypes) => {
       });
       this.hasOne(models.Committee, { foreignKey: "UserId" });
     }
+
+    // Method to check if profile is complete
+    isProfileComplete() {
+      return (
+        this.first_name &&
+        this.last_name &&
+        this.surname &&
+        this.email &&
+        this.mobile_phone_number &&
+        this.title &&
+        this.gender &&
+        this.office_phone_number &&
+        this.office_room_number
+      );
+    }
   }
+
   User.init(
     {
       user_id: {
@@ -46,7 +63,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      academic_title: {
+      title: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -73,19 +90,6 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "users",
     }
   );
+
   return User;
 };
-
-// when user applies they should update on the profile their complete info
-
-// admin must create all users with roles
-
-// applicant, tenant
-// comite
-// vice, president, head, team leader, director
-// position -- committee
-// hr, staff,
-// team leader, fac, vice, head - members of comite
-// secondary committee + hr manager, secondary committee + staff affairs, secondary
-// C2 HR, C2 Staff Affairs, Secondary Committee
-//vice, pres, head, fac, applicant, tenant --

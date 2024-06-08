@@ -63,9 +63,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      years_of_experience: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
       position: {
         type: DataTypes.STRING,
         allowNull: false,
+      },
+      is_active_position: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: true,
       },
       academic_title: {
         type: DataTypes.STRING,
@@ -90,8 +100,9 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       document_verified: {
-        type: DataTypes.STRING,
+        type: DataTypes.BOOLEAN,
         allowNull: false,
+        defaultValue: false,
       },
       temporary_grade: {
         type: DataTypes.DOUBLE,

@@ -33,6 +33,7 @@ module.exports = (allowedRoles) => async (req, res, next) => {
 
     // Store user information in the request object
     req.user = decoded;
+    console.log(req.user);
 
     // Proceed to the next middleware or route handler
     next();
