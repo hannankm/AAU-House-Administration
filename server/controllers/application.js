@@ -3,6 +3,7 @@
 // get applications by house ad
 const Application = require("../models").Application;
 const HouseAdvertisement = require("../models").HouseAdvertisement;
+const HouseReturn = require("../models").HouseReturn;
 const Advertisement = require("../models").Advertisement;
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
@@ -28,6 +29,8 @@ const createApplication = async (req, res) => {
       spouse_id,
       family_size,
       position,
+      is_active_position,
+      years_of_experience,
       college_department,
       academic_title,
       type,
@@ -54,6 +57,8 @@ const createApplication = async (req, res) => {
       family_size,
       status: "pending",
       position,
+      is_active_position,
+      years_of_experience,
       academic_title,
       type,
       college_department,
@@ -100,6 +105,7 @@ const getApplicationById = async (req, res) => {
 };
 
 const updateApplication = async (req, res) => {
+  // if applicant must be owner only
   const { id } = req.params;
   try {
     const [updatedRowsCount, updatedApplications] = await Application.update(
@@ -136,59 +142,154 @@ const deleteApplication = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-const evaluateTemporaryGrade = (application) => {
+
+const evaluateTemporaryGrade = async (application) => {
+  console.log("evaluating");
   let temporary_grade = 0;
 
+  // Gender
   if (application.gender == "F") {
     temporary_grade += 5;
   }
+
+  // Disability
   if (application.disability != "None") {
     temporary_grade += 10;
   }
-  if (application.family_size > 4) {
-  } else if (application.family_size > 3) {
+
+  // Family Size
+  if (application.family_size > 5) {
+    temporary_grade += 20;
   } else {
-  }
-  if (application.position == "") {
-  } else if ((application.position = "")) {
-  } else {
+    temporary_grade += 4 * application.family_size;
   }
 
+  // Position
+  if (application.is_active_position) {
+    if (
+      [
+        "dean",
+        "director",
+        "main registrar",
+        "main librarian",
+        "student's dean",
+        "student services",
+      ].includes(application.position)
+    ) {
+      temporary_grade += 20;
+    } else if (
+      application.position == "assistant dean" ||
+      application.position == "course coordinator"
+    ) {
+      temporary_grade += 15;
+    } else if (
+      ["undergrad coordinator", "postgrad coordinator", "unit leader"].includes(
+        application.position
+      )
+    ) {
+      temporary_grade += 10;
+    }
+  } else {
+    if (
+      [
+        "dean",
+        "director",
+        "main registrar",
+        "main librarian",
+        "student's dean",
+        "student services",
+      ].includes(application.position)
+    ) {
+      temporary_grade += 13;
+    } else if (
+      application.position == "assistant dean" ||
+      application.position == "course coordinator"
+    ) {
+      temporary_grade += 7.5;
+    } else if (
+      ["undergrad coordinator", "postgrad coordinator", "unit leader"].includes(
+        application.position
+      )
+    ) {
+      temporary_grade += 5;
+    }
+  }
+
+  // Spouse is Staff
   if (application.is_spouse_staff) {
     temporary_grade += 20;
   }
-  if (application.academic_title == "") {
+
+  // Academic Title
+  switch (application.academic_title) {
+    case "professor":
+      temporary_grade += 30;
+      break;
+    case "associate professor":
+      temporary_grade += 25;
+      break;
+    case "assistant professor":
+      temporary_grade += 20;
+      break;
+    case "lecturer":
+      temporary_grade += 15;
+      break;
+    case "assistant lecturer":
+      temporary_grade += 12;
+      break;
+    case "graduate assistant":
+      temporary_grade += 10;
+      break;
   }
 
-  // application.gender == F +5
-  // if disability == yes +10
-  // if application.yoe >15 20,
-  // application. position
-  // acadmic title
-  // family size ==
-  // if spouse is staff
+  // Years of Experience
+  if (application.years_of_experience > 15) {
+    temporary_grade += 20;
+  } else if (application.years_of_experience > 10) {
+    temporary_grade += 15;
+  } else if (application.years_of_experience > 5) {
+    temporary_grade += 10;
+  }
+
+  // const houseReturnsCount = await HouseReturn.count({
+  //   where: { user_id: application.applicant_id },
+  // });
+  // if (houseReturnsCount > 0) {
+  //   temporary_grade += 5; // Award 5 additional points if a home was returned
+  // }
+  console.log(temporary_grade);
+  await application.update({
+    temporary_grade: temporary_grade,
+    status: "results generated",
+  });
+
+  return temporary_grade;
 };
 
 const generateTemporaryResults = async (req, res) => {
   try {
     // Extract advertisement ID from request parameters
     const { adId } = req.params;
-    const ad = await Advertisement.findByPk(id);
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ message: "Advertisement not found." });
+    }
 
     // Find all house advertisements associated with the provided advertisement ID
     const houseAdvertisements = await HouseAdvertisement.findAll({
       where: { ad_id: adId },
-      include: [{ model: Application }],
+      include: [{ model: Application, as: "applications" }],
     });
 
-    if (ad.status != "documents verified") {
+    if (ad.status !== "documents verified") {
       let allApplicationsProcessed = true;
 
       // Iterate through each house advertisement
       for (const houseAd of houseAdvertisements) {
         // Check if there are any pending applications
-        const hasPendingApplications = houseAd.Applications.some(
-          (application) => application.status === "pending"
+        const hasPendingApplications = houseAd.applications.some(
+          (application) => application.document_verified == "pending"
         );
 
         if (hasPendingApplications) {
@@ -206,23 +307,22 @@ const generateTemporaryResults = async (req, res) => {
         await ad.update({ status: "documents verified" });
       }
     }
-    // Initialize a flag to check if all applications are not pending
 
     // Iterate through each house advertisement
     for (const houseAd of houseAdvertisements) {
       // Iterate through each application in the house advertisement
-      for (const application of houseAd.Applications) {
+      for (const application of houseAd.applications || []) {
         if (
-          application.status == "document verified" &&
+          application.status == "documents verified" &&
           application.document_verified
         ) {
           // Evaluate temporary grade and update the application
-          const temporaryGrade = evaluateTemporaryGrade(application);
-          await application.update({ temporary_grade: temporaryGrade });
+          evaluateTemporaryGrade(application);
         }
       }
-      // update ad status to results generated
     }
+
+    // Update ad status to results generated
     await ad.update({ status: "temporary results generated" });
 
     res
@@ -270,3 +370,9 @@ module.exports = {
 
 // evaluate result
 // generate result feild for a house ad -> all house-ads in an ad.
+
+// update model
+// yoe
+// is position active
+// returned house
+// make profile entries required to apply
