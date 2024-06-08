@@ -3,7 +3,7 @@ const { House } = require("../models");
 const HouseAdvertisement = require("../models").HouseAdvertisement;
 const Application = require("../models").Application;
 
-const { Op, Sequelize } = require("sequelize");
+const { Sequelize } = require("sequelize");
 const { createAnnouncement } = require("./announcements");
 
 const createAdvertisement = async (req, res) => {
@@ -438,53 +438,53 @@ const getTemporaryAdOverview = async (req, res) => {
       });
     }
 
+    // Fetch HouseAdvertisements with aggregated application data
     const houseAds = await HouseAdvertisement.findAll({
       where: { ad_id: ad.ad_id },
       include: [
         {
           model: Application,
           as: "applications",
-          attributes: [
-            "HouseAdvertisementId",
-            [
-              Sequelize.fn(
-                "COUNT",
-                Sequelize.col("applications.application_id")
-              ),
-              "total",
-            ],
-            [
-              Sequelize.fn(
-                "SUM",
-                Sequelize.literal(
-                  'CASE WHEN "applications"."status" = \'pending\' THEN 1 ELSE 0 END'
-                )
-              ),
-              "pending",
-            ],
-            [
-              Sequelize.fn(
-                "SUM",
-                Sequelize.literal(
-                  'CASE WHEN "applications"."status" = \'documents verified\' THEN 1 ELSE 0 END'
-                )
-              ),
-              "verified",
-            ],
-            [
-              Sequelize.fn(
-                "SUM",
-                Sequelize.literal(
-                  'CASE WHEN "applications"."status" = \'disqualified\' THEN 1 ELSE 0 END'
-                )
-              ),
-              "disqualified",
-            ],
-          ],
-          // Grouping by the id of HouseAdvertisement
+          attributes: [],
         },
       ],
-      group: ["HouseAdvertisement.id", "applications.application_id"],
+      attributes: [
+        "id",
+        "ad_id",
+        "house_id",
+        [
+          Sequelize.fn("COUNT", Sequelize.col("applications.application_id")),
+          "total",
+        ],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(
+              "CASE WHEN applications.status = 'pending' THEN 1 ELSE 0 END"
+            )
+          ),
+          "pending",
+        ],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(
+              "CASE WHEN applications.status = 'documents verified' THEN 1 ELSE 0 END"
+            )
+          ),
+          "verified",
+        ],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(
+              "CASE WHEN applications.status = 'disqualified' THEN 1 ELSE 0 END"
+            )
+          ),
+          "disqualified",
+        ],
+      ],
+      group: ["HouseAdvertisement.id"],
     });
 
     // Initialize response object
@@ -497,11 +497,11 @@ const getTemporaryAdOverview = async (req, res) => {
     // Process each house ad
     for (let houseAd of houseAds) {
       // Extract aggregated application data
-      const applicationData = houseAd.applications || {
-        total: 0,
-        pending: 0,
-        verified: 0,
-        disqualified: 0,
+      const applicationData = {
+        total: parseInt(houseAd.dataValues.total) || 0,
+        pending: parseInt(houseAd.dataValues.pending) || 0,
+        verified: parseInt(houseAd.dataValues.verified) || 0,
+        disqualified: parseInt(houseAd.dataValues.disqualified) || 0,
       };
 
       // Determine if there are pending applications
@@ -539,7 +539,6 @@ const getTemporaryAdOverview = async (req, res) => {
     });
   }
 };
-
 // preview result
 const rankByTemporaryGrade = async (req, res) => {
   try {
@@ -547,7 +546,7 @@ const rankByTemporaryGrade = async (req, res) => {
     // Find all house advertisements associated with the provided advertisement ID
     const houseAdvertisements = await HouseAdvertisement.findAll({
       where: { ad_id: adId },
-      include: [{ model: Application }],
+      include: [{ model: Application, as: "applications" }],
     });
 
     // Prepare a response object grouped by house advertisement ID
@@ -555,26 +554,26 @@ const rankByTemporaryGrade = async (req, res) => {
 
     // Iterate through each house advertisement
     for (const houseAd of houseAdvertisements) {
-      const sortedApplications = [];
+      let sortedApplications = [];
 
       // Sort only if temporary grade is available and application status is "document_verified"
       if (
-        houseAd.Applications.every(
+        houseAd.applications.every(
           (app) =>
             app.temporary_grade &&
-            app.status === "document_verified" &&
-            app.document_verified === "verified"
+            app.status == "results generated" &&
+            app.document_verified
         )
       ) {
         // Sort applications by temporary grade descending, then apply tie-breaking rules
-        sortedApplications = houseAd.Applications.sort((a, b) => {
+        sortedApplications = houseAd.applications.sort((a, b) => {
           if (b.temporary_grade !== a.temporary_grade) {
             return b.temporary_grade - a.temporary_grade;
           }
-          if (b.disability && !a.disability) {
+          if (b.disablity && !a.disablity) {
             return 1;
           }
-          if (!b.disability && a.disability) {
+          if (!b.disablity && a.disablity) {
             return -1;
           }
           if (b.gender === "Female" && a.gender !== "Female") {
@@ -588,7 +587,7 @@ const rankByTemporaryGrade = async (req, res) => {
         });
       }
 
-      response[houseAd.ad_id] = sortedApplications;
+      response[houseAd.id] = sortedApplications;
     }
 
     res.status(200).json(response);
@@ -604,7 +603,7 @@ const announceTemporaryAdResults = async (req, res) => {
     const { adId } = req.params;
 
     // Find the advertisement by ID
-    const ad = await Advertisement.findOne({ where: { id: adId } });
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
 
     if (!ad) {
       return res.status(404).json({ error: "Advertisement not found." });
@@ -615,7 +614,7 @@ const announceTemporaryAdResults = async (req, res) => {
     const announcementReq = {
       header: req.header.bind(req), // to pass the authorization header
       body: {
-        title: `Results for ${ad.title}`,
+        title: `Temporary Results for house advertisment`,
         description: `The temporary results for the housing advertisements posted on "${ad.post_date}" have been announced. Please check the results at the provided link.`,
         link: "/temporary-results/" + ad.ad_id,
       },
@@ -644,7 +643,10 @@ const announceTemporaryAdResults = async (req, res) => {
     }
 
     // Update the ad status to "temporary results announced"
-    await ad.update({ status: "temporary results announced" });
+    await ad.update({
+      status: "temporary results announced",
+      tentative_result_announcement: Date.now(),
+    });
 
     res.status(201).json({
       message: "Announcement created and ad status updated successfully.",
@@ -662,22 +664,23 @@ const announceTemporaryAdResults = async (req, res) => {
 const viewTemporaryAdResults = async (req, res) => {
   try {
     const { adId } = req.params;
-    const ad = await Advertisement.findOne({ where: { id: adId } });
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
 
     if (!ad) {
       return res.status(404).json({ error: "Advertisement not found." });
     }
 
     // Check if the ad status is "temporary results announced"
-    if (ad.status !== "temporary results announced") {
+    if (ad.status != "temporary results announced") {
       return res
         .status(400)
         .json({ error: "Temporary results not announced yet." });
     }
+
     // Find all house advertisements associated with the provided advertisement ID
     const houseAdvertisements = await HouseAdvertisement.findAll({
       where: { ad_id: adId },
-      include: [{ model: Application }],
+      include: [{ model: Application, as: "applications" }],
     });
 
     // Prepare a response object grouped by house advertisement ID
@@ -685,19 +688,20 @@ const viewTemporaryAdResults = async (req, res) => {
 
     // Iterate through each house advertisement
     for (const houseAd of houseAdvertisements) {
-      const sortedApplications = [];
+      let sortedApplications = [];
 
-      // Sort only if temporary grade is available and application status is "document_verified"
+      // Sort only if temporary grade is available and application status is "results generated"
       if (
-        houseAd.Applications.every(
+        houseAd.applications &&
+        houseAd.applications.every(
           (app) =>
-            app.temporary_grade &&
-            app.status === "document_verified" &&
-            app.document_verified === "verified"
+            app.temporary_grade !== null &&
+            app.status === "results generated" &&
+            app.document_verified
         )
       ) {
         // Sort applications by temporary grade descending, then apply tie-breaking rules
-        sortedApplications = houseAd.Applications.sort((a, b) => {
+        sortedApplications = houseAd.applications.sort((a, b) => {
           if (b.temporary_grade !== a.temporary_grade) {
             return b.temporary_grade - a.temporary_grade;
           }
@@ -716,9 +720,157 @@ const viewTemporaryAdResults = async (req, res) => {
           // Random tie-breaker
           return Math.random() - 0.5;
         });
+
+        // Append grading logic and assigned points to each application entry
+        sortedApplications = sortedApplications.map((app) => {
+          let temporary_grade = 0;
+          let note = "";
+
+          // Gender
+          if (app.gender === "Female") {
+            temporary_grade += 5;
+            note += "Gender (Female): +5. ";
+          }
+
+          // Disability
+          if (app.disability !== "None") {
+            temporary_grade += 10;
+            note += "Disability: +10. ";
+          }
+
+          // Family Size
+          if (app.family_size > 5) {
+            temporary_grade += 20;
+            note += "Family Size (>5): +20. ";
+          } else {
+            const familySizePoints = 4 * app.family_size;
+            temporary_grade += familySizePoints;
+            note += `Family Size (<=5): +${familySizePoints}. `;
+          }
+
+          // Position
+          if (app.is_active_position) {
+            if (
+              [
+                "dean",
+                "director",
+                "main registrar",
+                "main librarian",
+                "student's dean",
+                "student services",
+              ].includes(app.position)
+            ) {
+              temporary_grade += 20;
+              note +=
+                "Active Position (Dean/Director/Main Registrar/etc.): +20. ";
+            } else if (
+              app.position === "assistant dean" ||
+              app.position === "course coordinator"
+            ) {
+              temporary_grade += 15;
+              note +=
+                "Active Position (Assistant Dean/Course Coordinator): +15. ";
+            } else if (
+              [
+                "undergrad coordinator",
+                "postgrad coordinator",
+                "unit leader",
+              ].includes(app.position)
+            ) {
+              temporary_grade += 10;
+              note +=
+                "Active Position (Undergrad/Postgrad Coordinator/Unit Leader): +10. ";
+            }
+          } else {
+            if (
+              [
+                "dean",
+                "director",
+                "main registrar",
+                "main librarian",
+                "student's dean",
+                "student services",
+              ].includes(app.position)
+            ) {
+              temporary_grade += 13;
+              note +=
+                "Inactive Position (Dean/Director/Main Registrar/etc.): +13. ";
+            } else if (
+              app.position === "assistant dean" ||
+              app.position === "course coordinator"
+            ) {
+              temporary_grade += 7.5;
+              note +=
+                "Inactive Position (Assistant Dean/Course Coordinator): +7.5. ";
+            } else if (
+              [
+                "undergrad coordinator",
+                "postgrad coordinator",
+                "unit leader",
+              ].includes(app.position)
+            ) {
+              temporary_grade += 5;
+              note +=
+                "Inactive Position (Undergrad/Postgrad Coordinator/Unit Leader): +5. ";
+            }
+          }
+
+          // Spouse is Staff
+          if (app.is_spouse_staff) {
+            temporary_grade += 20;
+            note += "Spouse is Staff: +20. ";
+          }
+
+          // Academic Title
+          switch (app.academic_title) {
+            case "professor":
+              temporary_grade += 30;
+              note += "Academic Title (Professor): +30. ";
+              break;
+            case "associate professor":
+              temporary_grade += 25;
+              note += "Academic Title (Associate Professor): +25. ";
+              break;
+            case "assistant professor":
+              temporary_grade += 20;
+              note += "Academic Title (Assistant Professor): +20. ";
+              break;
+            case "lecturer":
+              temporary_grade += 15;
+              note += "Academic Title (Lecturer): +15. ";
+              break;
+            case "assistant lecturer":
+              temporary_grade += 12;
+              note += "Academic Title (Assistant Lecturer): +12. ";
+              break;
+            case "graduate assistant":
+              temporary_grade += 10;
+              note += "Academic Title (Graduate Assistant): +10. ";
+              break;
+          }
+
+          // Years of Experience
+          if (app.years_of_experience > 15) {
+            temporary_grade += 20;
+            note += "Years of Experience (>15): +20. ";
+          } else if (app.years_of_experience > 10) {
+            temporary_grade += 15;
+            note += "Years of Experience (>10): +15. ";
+          } else if (app.years_of_experience > 5) {
+            temporary_grade += 10;
+            note += "Years of Experience (>5): +10. ";
+          }
+          note += `Grade: ${temporary_grade}. `;
+
+          return {
+            ...app.dataValues,
+            temporary_grade,
+            note,
+          };
+        });
       }
 
-      response[houseAd.ad_id] = sortedApplications;
+      response[houseAd.id] = sortedApplications;
     }
 
     res.status(200).json(response);
