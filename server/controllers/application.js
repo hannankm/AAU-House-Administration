@@ -358,6 +358,227 @@ const submitApplication = async (req, res) => {
   // change status to "submitted"
 };
 
+const viewMyResult = async (req, res) => {
+  try {
+    // Assuming the user ID is available in req.user.id
+    const authorizationHeader = req.header("Authorization");
+    if (!authorizationHeader) {
+      return res.status(401).json({ error: "Authorization header missing" });
+    }
+
+    const token = authorizationHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.jwtSecret);
+    const applicant_id = decodedToken.user_id;
+    // Fetch the application associated with the user
+    const application = await Application.findOne({
+      where: { applicant_id: applicant_id },
+    });
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+    if (application.status !== "temporary results announced") {
+      return res
+        .status(400)
+        .json({ message: "Temporary results not announced yet." });
+    }
+
+    // Calculate temporary grade and prepare notes
+    let notes = [];
+
+    // Gender
+    if (application.gender === "Female") {
+      notes.push("Gender (Female): +5");
+    }
+
+    // Disability
+    if (application.disability !== "None") {
+      notes.push("Disability: +10. ");
+    }
+
+    // Family Size
+    if (application.family_size > 5) {
+      notes.push("Family Size (>5): +20. ");
+    } else {
+      const familySizePoints = 4 * application.family_size;
+      notes.push(`Family Size (<=5): +${familySizePoints}. `);
+    }
+
+    // Position
+    if (application.is_active_position) {
+      if (
+        [
+          "dean",
+          "director",
+          "main registrar",
+          "main librarian",
+          "student's dean",
+          "student services",
+        ].includes(application.position)
+      ) {
+        notes.push(
+          "Active Position (Dean/Director/Main Registrar/etc.): +20. "
+        );
+      } else if (
+        application.position === "assistant dean" ||
+        application.position === "course coordinator"
+      ) {
+        notes.push(
+          "Active Position (Assistant Dean/Course Coordinator): +15. "
+        );
+      } else if (
+        [
+          "undergrad coordinator",
+          "postgrad coordinator",
+          "unit leader",
+        ].includes(application.position)
+      ) {
+        notes.push(
+          "Active Position (Undergrad/Postgrad Coordinator/Unit Leader): +10. "
+        );
+      }
+    } else {
+      if (
+        [
+          "dean",
+          "director",
+          "main registrar",
+          "main librarian",
+          "student's dean",
+          "student services",
+        ].includes(application.position)
+      ) {
+        temporary_grade += 13;
+        notes.push(
+          "Inactive Position (Dean/Director/Main Registrar/etc.): +13. "
+        );
+      } else if (
+        application.position === "assistant dean" ||
+        application.position === "course coordinator"
+      ) {
+        notes.push(
+          "Inactive Position (Assistant Dean/Course Coordinator): +7.5. "
+        );
+      } else if (
+        [
+          "undergrad coordinator",
+          "postgrad coordinator",
+          "unit leader",
+        ].includes(application.position)
+      ) {
+        notes.push(
+          "Inactive Position (Undergrad/Postgrad Coordinator/Unit Leader): +5. "
+        );
+      }
+    }
+
+    // Spouse is Staff
+    if (application.is_spouse_staff) {
+      notes.push("Spouse is Staff: +20. ");
+    }
+
+    // Academic Title
+    switch (application.academic_title) {
+      case "professor":
+        notes.push("Academic Title (Professor): +30. ");
+        break;
+      case "associate professor":
+        notes.push("Academic Title (Associate Professor): +25. ");
+        break;
+      case "assistant professor":
+        notes.push("Academic Title (Assistant Professor): +20. ");
+        break;
+      case "lecturer":
+        notes.push("Academic Title (Lecturer): +15. ");
+        break;
+      case "assistant lecturer":
+        notes.push("Academic Title (Assistant Lecturer): +12. ");
+        break;
+      case "graduate assistant":
+        notes.push("Academic Title (Graduate Assistant): +10. ");
+        break;
+    }
+
+    // Years of Experience
+    if (application.years_of_experience > 15) {
+      notes.push("Years of Experience (>15): +20. ");
+    } else if (application.years_of_experience > 10) {
+      notes.push("Years of Experience (>10): +15. ");
+    } else if (application.years_of_experience > 5) {
+      notes.push("Years of Experience (>5): +10. ");
+    }
+    notes.push(`Grade: ${application.temporary_grade}. `);
+
+    // Respond with the application details
+    return res.json({ application: application, notes: notes });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const generateFinalResults = async (req, res) => {
+  try {
+    const { adId } = req.params;
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ error: "Advertisement not found." });
+    }
+
+    // Check if the ad status is "temporary results announced"
+    if (ad.status !== "temporary results announced") {
+      return res
+        .status(400)
+        .json({ error: "Temporary results not announced yet." });
+    }
+
+    // Find all applications associated with the provided advertisement ID
+    const applications = await Application.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Complaint, as: "complaints" }],
+    });
+
+    let unresolvedComplaintsExist = false;
+
+    // Check for unresolved complaints and update final grades
+    for (const application of applications) {
+      const unresolvedComplaints = application.complaints.filter(
+        (complaint) => complaint.status !== "resolved"
+      );
+
+      if (unresolvedComplaints.length > 0) {
+        unresolvedComplaintsExist = true;
+        break;
+      }
+
+      if (
+        application.temporary_grade &&
+        application.status !== "disqualified"
+      ) {
+        application.final_grade = application.temporary_grade;
+        application.status = "final result generated";
+        await application.save();
+      }
+    }
+
+    if (unresolvedComplaintsExist) {
+      return res.status(400).json({
+        error: "There are unresolved complaints for some applications.",
+      });
+    }
+
+    // Update the advertisement status to "final result generated"
+    ad.status = "final result generated";
+    await ad.save();
+
+    res.status(200).json({ message: "Final results generated successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   createApplication,
   getApplications,
@@ -366,6 +587,9 @@ module.exports = {
   deleteApplication,
   view_my_applications,
   generateTemporaryResults,
+  evaluateTemporaryGrade,
+  generateFinalResults,
+  viewMyResult,
 };
 
 // evaluate result

@@ -600,6 +600,7 @@ const rankByTemporaryGrade = async (req, res) => {
 // who posts this announcement? head or vice
 const announceTemporaryAdResults = async (req, res) => {
   try {
+    // if status == temporary result generated
     const { adId } = req.params;
 
     // Find the advertisement by ID
@@ -607,6 +608,26 @@ const announceTemporaryAdResults = async (req, res) => {
 
     if (!ad) {
       return res.status(404).json({ error: "Advertisement not found." });
+    }
+    if (ad.status !== "temporary results generated") {
+      return res
+        .status(400)
+        .json({ error: "Temporary results not generated yet." });
+    }
+
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application, as: "applications" }],
+    });
+
+    // Update each application status to "temporary result generated"
+    for (const houseAd of houseAdvertisements) {
+      if (houseAd.applications) {
+        for (const application of houseAd.applications) {
+          await application.update({ status: "temporary result generated" });
+        }
+      }
     }
 
     // Create the announcement based on the ad details
@@ -878,7 +899,254 @@ const viewTemporaryAdResults = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getFinalResultOverview = async (req, res) => {
+  try {
+    const { adId } = req.params;
 
+    // Find the advertisement by ID
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ error: "Advertisement not found." });
+    }
+
+    // Get complaints stats
+    const totalComplaints = await Complaint.count({ where: { ad_id: adId } });
+    const resolvedComplaints = await Complaint.count({
+      where: { ad_id: adId, status: "resolved" },
+    });
+    const unresolvedComplaints = totalComplaints - resolvedComplaints;
+
+    const noUnresolvedComplaint = unresolvedComplaints === 0;
+
+    // Fetch ad details
+    const adDetails = {
+      status: ad.status,
+      post_date: ad.post_date,
+      noUnresolvedComplaint,
+      totalComplaints,
+      resolvedComplaints,
+      unresolvedComplaints,
+    };
+
+    res.status(200).json(adDetails);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+const previewFinalResult = async (req, res) => {
+  try {
+    const { adId } = req.params;
+
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application, as: "applications" }],
+    });
+
+    const results = {};
+
+    // Sort applications by final grade in descending order with tie-breaking rules
+    for (const houseAd of houseAdvertisements) {
+      if (houseAd.applications) {
+        const sortedApplications = houseAd.applications.sort((a, b) => {
+          if (b.final_grade !== a.final_grade) {
+            return b.final_grade - a.final_grade;
+          }
+          if (b.disability && !a.disability) {
+            return 1;
+          }
+          if (!b.disability && a.disability) {
+            return -1;
+          }
+          if (b.gender === "Female" && a.gender !== "Female") {
+            return 1;
+          }
+          if (a.gender === "Female" && b.gender !== "Female") {
+            return -1;
+          }
+          return Math.random() - 0.5;
+        });
+
+        results[houseAd.id] = sortedApplications;
+      }
+    }
+
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const viewFinalResult = async (req, res) => {
+  try {
+    const { adId } = req.params;
+
+    // Find the advertisement by ID
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ error: "Advertisement not found." });
+    }
+
+    // Check if ad status is "final results announced"
+    if (ad.status !== "final results announced") {
+      return res
+        .status(400)
+        .json({ error: "Final results not announced yet." });
+    }
+
+    // Find all house advertisements associated with the provided advertisement ID
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application, as: "applications" }],
+    });
+
+    const results = {};
+
+    // Sort applications by final grade in descending order with tie-breaking rules
+    for (const houseAd of houseAdvertisements) {
+      if (houseAd.applications) {
+        const sortedApplications = houseAd.applications.sort((a, b) => {
+          if (b.final_grade !== a.final_grade) {
+            return b.final_grade - a.final_grade;
+          }
+          if (b.disability && !a.disability) {
+            return 1;
+          }
+          if (!b.disability && a.disability) {
+            return -1;
+          }
+          if (b.gender === "Female" && a.gender !== "Female") {
+            return 1;
+          }
+          if (a.gender === "Female" && b.gender !== "Female") {
+            return -1;
+          }
+          return Math.random() - 0.5;
+        });
+        const winners = sortedApplications.slice(0, 1); // Assume one winner per houseAd
+        const waitlisted = sortedApplications.slice(1);
+
+        for (const winner of winners) {
+          await winner.update({ status: "winner" });
+          sendLeaseAgreementEmail(winner.email);
+        }
+
+        for (const application of waitlisted) {
+          await application.update({ status: "waitlisted" });
+        }
+
+        results[houseAd.id] = sortedApplications;
+      }
+    }
+
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const sendLeaseAgreementEmail = (email) => {
+  // Logic to send email with lease agreement
+};
+const announceFinalResult = async (req, res) => {
+  try {
+    const { adId } = req.params;
+
+    // Find the advertisement by ID
+    const ad = await Advertisement.findOne({ where: { ad_id: adId } });
+
+    if (!ad) {
+      return res.status(404).json({ error: "Advertisement not found." });
+    }
+
+    // Check if there are any unresolved complaints
+    const unresolvedComplaints = await Complaint.count({
+      where: { ad_id: adId, status: { [Op.ne]: "resolved" } },
+    });
+
+    if (unresolvedComplaints > 0) {
+      return res
+        .status(400)
+        .json({ error: "There are unresolved complaints." });
+    }
+
+    // Check if ad status is "final results generated"
+    if (ad.status !== "final results generated") {
+      return res
+        .status(400)
+        .json({ error: "Final results not generated yet." });
+    }
+
+    // Create the announcement request object
+    const announcementReq = {
+      header: req.header.bind(req), // to pass the authorization header
+      body: {
+        title: `Final Results for House Advertisement`,
+        description: `The final results for the housing advertisements posted on "${ad.post_date}" have been announced. Please check the results at the provided link.`,
+        link: "/final-results/" + ad.ad_id,
+      },
+    };
+
+    // Use a custom response object to capture the createAnnouncement response
+    const announcementRes = {
+      status: (statusCode) => ({
+        json: (response) => {
+          announcementRes.statusCode = statusCode;
+          announcementRes.response = response;
+        },
+      }),
+      statusCode: null,
+      response: null,
+    };
+
+    // Call the createAnnouncement method
+    await createAnnouncement(announcementReq, announcementRes);
+
+    // Check if the announcement was created successfully
+    if (announcementRes.statusCode !== 201) {
+      return res
+        .status(announcementRes.statusCode)
+        .json(announcementRes.response);
+    }
+
+    // Update the ad status to "final results announced"
+    await ad.update({
+      status: "final results announced",
+      final_result_announcement: Date.now(),
+    });
+
+    // Email the application winners with lease agreements
+    const houseAdvertisements = await HouseAdvertisement.findAll({
+      where: { ad_id: adId },
+      include: [{ model: Application, as: "applications" }],
+    });
+
+    for (const houseAd of houseAdvertisements) {
+      if (houseAd.applications) {
+        const winners = houseAd.applications.filter(
+          (app) => app.status === "approved"
+        );
+        await sendEmailToWinners(winners);
+      }
+    }
+    scheduleLeaseSigningCheck();
+
+    res.status(201).json({
+      message:
+        "Announcement created, ad status updated, and emails sent successfully.",
+      announcement: announcementRes.response.announcement,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+// view final result
+const scheduleLeaseSigningCheck = () => {
+  // Schedule the lease signing check
+  schedule.scheduleJob("0 0 * * *", checkLeaseSigning);
+};
 module.exports = {
   createAdvertisement,
   getAdvertisements,
@@ -905,8 +1173,8 @@ module.exports = {
 // get rejected ads for head then update it
 // status - application closed
 
-// send complaints
-// get complaints and make changes
+// send complaints done
+// get complaints and make changes done
 // rank by final result
 // announce final result
 // sign lease
