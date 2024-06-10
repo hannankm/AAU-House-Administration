@@ -27,6 +27,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "application_id",
         as: "documents",
       });
+      Application.hasMany(models.Complaint, {
+        as: "complaints",
+        foreignKey: "application_id",
+      });
     }
   }
 

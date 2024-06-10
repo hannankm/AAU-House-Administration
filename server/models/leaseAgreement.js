@@ -12,12 +12,16 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       LeaseAgreement.belongsTo(models.User, {
-        foreignKey: "UserId",
+        foreignKey: "tenant_id",
         as: "user",
       });
       LeaseAgreement.belongsTo(models.House, {
         foreignKey: "house_id",
         as: "house",
+      });
+      LeaseAgreement.hasOne(models.PayrollLetter, {
+        foreignKey: "lease_id",
+        as: "payrollLetter",
       });
     }
   }
@@ -40,6 +44,7 @@ module.exports = (sequelize, DataTypes) => {
       status: {
         type: DataTypes.STRING,
         allowNull: false,
+        defaultValue: "pending",
       },
       payment_method: {
         type: DataTypes.STRING,
@@ -68,6 +73,10 @@ module.exports = (sequelize, DataTypes) => {
           key: "application_id",
         },
         allowNull: false,
+      },
+      team_leader_signature: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
     },
     {
