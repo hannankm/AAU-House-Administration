@@ -187,7 +187,7 @@ const verifyDocuments = async (req, res) => {
       (doc) => doc.verification_status === "verified"
     );
     if (allDocumentsVerified) {
-      application.status == "documents verified";
+      application.status = "documents verified";
       application.document_verified = true;
     }
     await application.save();

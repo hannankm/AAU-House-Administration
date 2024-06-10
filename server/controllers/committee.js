@@ -1,7 +1,7 @@
-const { Committee, User } = require("../models");
+const { Committee, User, Role, UserRole } = require("../models");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+const transporter = require("../utils/gmailTransporter");
 const { v4: uuidv4 } = require("uuid");
 const dotenv = require("dotenv");
 
@@ -19,14 +19,6 @@ const generateTempPassword = () => {
 
 // Function to send email
 const sendEmail = async (email, subject, text) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.email_address, // replace with your email
-      pass: process.env.email_password, // replace with your email password or app-specific password
-    },
-  });
-
   const mailOptions = {
     from: process.env.email_address,
     to: email,
@@ -85,7 +77,7 @@ const invitePrimaryCommitteeMember = async (req, res) => {
     // Assign primary committee role to the user
     await UserRole.create({
       user_id: newUser.user_id,
-      role_id: primaryRole.id,
+      role_id: primaryRole.role_id,
     });
 
     // Send email with temporary password
@@ -152,7 +144,7 @@ const inviteSecondaryCommitteeMember = async (req, res) => {
     // Assign secondary committee role to the user
     await UserRole.create({
       user_id: newUser.user_id,
-      role_id: secondaryRole.id,
+      role_id: secondaryRole.role_id,
     });
 
     // Send email with temporary password
@@ -167,7 +159,7 @@ const inviteSecondaryCommitteeMember = async (req, res) => {
       newCommittee,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, details: error });
   }
 };
 // Check committee assignment dates and notify VP
